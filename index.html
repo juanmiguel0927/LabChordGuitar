@@ -331,28 +331,36 @@
             };
             
             if (track === 'triads') {
-                if (type === 'maj_251') return [ { root: getNote(2), quality: 'min', label: 'IIm' }, { root: getNote(7), quality: 'maj', label: 'V' }, { root: getNote(0), quality: 'maj', label: 'I' } ];
+                if (type === 'maj_251') return [ { root: getNote(2), quality: 'min', label: 'IIm' }, { root: getNote(7), quality: 'maj', label: 'V' }, { root: getNote(0), quality: 'maj', label: 'I', duration: 2 } ];
                 if (type === 'maj_cycle') return [ { root: getNote(0), quality: 'maj', label: 'I' }, { root: getNote(5), quality: 'maj', label: 'IV' }, { root: getNote(11), quality: 'dim', label: 'VII°' }, { root: getNote(4), quality: 'min', label: 'IIIm' }, { root: getNote(9), quality: 'min', label: 'VIm' }, { root: getNote(2), quality: 'min', label: 'IIm' }, { root: getNote(7), quality: 'maj', label: 'V' } ];
-                if (type === 'min_251') return [ { root: getNote(2), quality: 'dim', label: 'II°' }, { root: getNote(7), quality: 'maj', label: 'V' }, { root: getNote(0), quality: 'min', label: 'Im' } ];
+                if (type === 'min_251') return [ { root: getNote(2), quality: 'dim', label: 'II°' }, { root: getNote(7), quality: 'maj', label: 'V' }, { root: getNote(0), quality: 'min', label: 'Im', duration: 2 } ];
                 if (type === 'min_cycle') return [ { root: getNote(0), quality: 'min', label: 'Im' }, { root: getNote(5), quality: 'min', label: 'IVm' }, { root: getNote(10), quality: 'maj', label: 'VII' }, { root: getNote(3), quality: 'maj', label: 'III' }, { root: getNote(8), quality: 'maj', label: 'VI' }, { root: getNote(2), quality: 'dim', label: 'II°' }, { root: getNote(7), quality: 'maj', label: 'V' } ];
             } else if (track === 'shells') {
-                if (type === 'maj_251') return [ { root: getNote(2), quality: 'm7_sh', label: 'IIm7' }, { root: getNote(7), quality: '7_sh', label: 'V7' }, { root: getNote(0), quality: 'maj7_sh', label: 'Imaj7' } ];
-                if (type === 'min_251') return [ { root: getNote(2), quality: 'm7b5_sh', label: 'IIm7b5' }, { root: getNote(7), quality: '7_sh', label: 'V7' }, { root: getNote(0), quality: 'm7_sh', label: 'Im7' } ];
+                if (type === 'maj_251') return [ { root: getNote(2), quality: 'm7_sh', label: 'IIm7' }, { root: getNote(7), quality: '7_sh', label: 'V7' }, { root: getNote(0), quality: 'maj7_sh', label: 'Imaj7', duration: 2 } ];
+                if (type === 'min_251') return [ { root: getNote(2), quality: 'm7b5_sh', label: 'IIm7b5' }, { root: getNote(7), quality: '7_sh', label: 'V7' }, { root: getNote(0), quality: 'm7_sh', label: 'Im7', duration: 2 } ];
                 if (type === 'maj_cycle') return [ { root: getNote(0), quality: 'maj7_sh', label: 'I' }, { root: getNote(5), quality: 'maj7_sh', label: 'IV' }, { root: getNote(11), quality: 'm7b5_sh', label: 'VII°' }, { root: getNote(4), quality: 'm7_sh', label: 'IIIm' }, { root: getNote(9), quality: 'm7_sh', label: 'VIm' }, { root: getNote(2), quality: 'm7_sh', label: 'IIm' }, { root: getNote(7), quality: '7_sh', label: 'V7' } ];
                 if (type === 'min_cycle') return [ { root: getNote(0), quality: 'm7_sh', label: 'Im' }, { root: getNote(5), quality: 'm7_sh', label: 'IVm' }, { root: getNote(10), quality: '7_sh', label: 'VII' }, { root: getNote(3), quality: 'maj7_sh', label: 'III' }, { root: getNote(8), quality: 'maj7_sh', label: 'VI' }, { root: getNote(2), quality: 'm7b5_sh', label: 'II°' }, { root: getNote(7), quality: '7_sh', label: 'V' } ];
             } else if (track === 'tensions') {
-                if (type === 'maj_251' || type === 'maj_cycle') {
-                    const rootNode = document.getElementById('root');
-                    const isRootless = rootNode ? rootNode.getAttribute('data-rootless') === 'true' : false;
+                const rootNode = document.getElementById('root');
+                const isRootless = rootNode ? rootNode.getAttribute('data-rootless') === 'true' : false;
+                
+                if (type === 'maj_251') {
+                    if (isRootless) return [ { root: getNote(2), quality: 'm9_rl', label: 'IIm9 RL' }, { root: getNote(7), quality: '9_rl', label: 'V9 RL' }, { root: getNote(0), quality: 'maj9_rl', label: 'Imaj9 RL', duration: 2 } ];
+                    return [ { root: getNote(2), quality: 'm9', label: 'IIm9' }, { root: getNote(7), quality: '13', label: 'V13' }, { root: getNote(0), quality: 'maj9', label: 'Imaj9', duration: 2 } ];
+                }
+                if (type === 'maj_cycle') {
                     if (isRootless) return [ { root: getNote(2), quality: 'm9_rl', label: 'IIm9 RL' }, { root: getNote(7), quality: '9_rl', label: 'V9 RL' }, { root: getNote(0), quality: 'maj9_rl', label: 'Imaj9 RL' } ];
                     return [ { root: getNote(2), quality: 'm9', label: 'IIm9' }, { root: getNote(7), quality: '13', label: 'V13' }, { root: getNote(0), quality: 'maj9', label: 'Imaj9' } ];
                 }
-                if (type === 'min_251' || type === 'min_cycle') {
+                if (type === 'min_251') {
+                    return [ { root: getNote(2), quality: 'm11', label: 'IIm11' }, { root: getNote(7), quality: '7b9', label: 'V7(b9)' }, { root: getNote(0), quality: 'm9', label: 'Im9', duration: 2 } ];
+                }
+                if (type === 'min_cycle') {
                     return [ { root: getNote(2), quality: 'm11', label: 'IIm11' }, { root: getNote(7), quality: '7b9', label: 'V7(b9)' }, { root: getNote(0), quality: 'm9', label: 'Im9' } ];
                 }
             } else {
-                if (type === 'maj_251') return [ { root: getNote(2), quality: 'm7', label: 'IIm7' }, { root: getNote(7), quality: '7', label: 'V7' }, { root: getNote(0), quality: 'maj7', label: 'Imaj7' } ];
-                if (type === 'min_251') return [ { root: getNote(2), quality: 'm7b5', label: 'IIm7b5' }, { root: getNote(7), quality: '7', label: 'V7' }, { root: getNote(0), quality: 'm7', label: 'Im7' } ];
+                if (type === 'maj_251') return [ { root: getNote(2), quality: 'm7', label: 'IIm7' }, { root: getNote(7), quality: '7', label: 'V7' }, { root: getNote(0), quality: 'maj7', label: 'Imaj7', duration: 2 } ];
+                if (type === 'min_251') return [ { root: getNote(2), quality: 'm7b5', label: 'IIm7b5' }, { root: getNote(7), quality: '7', label: 'V7' }, { root: getNote(0), quality: 'm7', label: 'Im7', duration: 2 } ];
                 if (type === 'maj_cycle') return [ { root: getNote(0), quality: 'maj7', label: 'I' }, { root: getNote(5), quality: 'maj7', label: 'IV' }, { root: getNote(11), quality: 'm7b5', label: 'VII°' }, { root: getNote(4), quality: 'm7', label: 'IIIm' }, { root: getNote(9), quality: 'm7', label: 'VIm' }, { root: getNote(2), quality: 'm7', label: 'IIm' }, { root: getNote(7), quality: '7', label: 'V7' } ];
                 if (type === 'min_cycle') return [ { root: getNote(0), quality: 'm7', label: 'Im' }, { root: getNote(5), quality: 'm7', label: 'IVm' }, { root: getNote(10), quality: '7', label: 'VII' }, { root: getNote(3), quality: 'maj7', label: 'III' }, { root: getNote(8), quality: 'maj7', label: 'VI' }, { root: getNote(2), quality: 'm7b5', label: 'II°' }, { root: getNote(7), quality: '7', label: 'V' } ];
             }
@@ -397,7 +405,7 @@
                     }
 
                     for (let i = startStr; i < allowedStrings.length; i++) {
-                        if (noteIdx === 0 && allowedStrings[i] !== stringIdx) continue;
+                        if (noteIdx === 0 && allowedStrings[i] !== stringIdx) continue; 
                         
                         let sNum = allowedStrings[i];
                         let fret = target - STRING_TUNINGS[sNum];
@@ -460,15 +468,8 @@
         const generateChordData = function(queryRoot, queryQuality, queryDrop, queryBassStr, trackList, contextKey, appTrack, notationMode = 'anglo') {
             if (!queryRoot || !trackList) return [];
             
-            // Para encontrar las notas crudas internas (anglo), limpiamos 'm' y cualquier traducción accidental
-            let rawRoot = queryRoot;
-            // Se asume que queryRoot ya viene en notación actual pero para operaciones MIDI necesitamos la estándar
-            // Si notationMode es latin, puede que queryRoot sea "Do", "Reb". Hay que mapear de vuelta si es necesario, 
-            // pero lo más seguro es manejar internamente todo en Anglo y traducir sólo al pintar.
-            // Modificaremos aquí para traducir los resultados.
-            
             const cleanRoot = queryRoot.replace('m', '');
-            const rootMidiBase = 60 + (NOTE_TO_MIDI[cleanRoot] !== undefined ? NOTE_TO_MIDI[cleanRoot] : NOTE_TO_MIDI['C']); // Fallback seguro
+            const rootMidiBase = 60 + (NOTE_TO_MIDI[cleanRoot] !== undefined ? NOTE_TO_MIDI[cleanRoot] : NOTE_TO_MIDI['C']); 
             
             let qualityObj = null;
             for (let i=0; i<trackList.length; i++) {
@@ -522,7 +523,7 @@
                     name: invNameStr, 
                     fingering: fing, 
                     rootMidi: rootMidiBase, 
-                    queryRoot: queryRoot, // Necesario para edición interna (siempre estándar Anglo si es posible)
+                    queryRoot: queryRoot, 
                     quality: qualityObj.id, 
                     drop: queryDrop, 
                     bassString: queryBassStr,
@@ -558,7 +559,6 @@
                     const isExactMatch = intervals.length === qIntervals.length && intervals.every(function(v, i) { return v === qIntervals[i]; });
                     let isMatch = isExactMatch;
                     
-                    // Permitir omitir la 5ta justa en acordes de 4 notas o más
                     if (!isExactMatch && intervals.length >= 3 && qIntervals.indexOf(7) !== -1) {
                          const missingFifth = qIntervals.filter(function(i) { return i !== 7; });
                          if (intervals.length === missingFifth.length && intervals.every(function(v,i) { return v === missingFifth[i]; })) {
@@ -668,7 +668,6 @@
 
                     {isLocked && <div className="absolute inset-0 z-40 flex items-center justify-center print:hidden"><Icon name="Lock" size={32} className="text-white/40" /></div>}
 
-                    {/* NUEVO: ÁREA DE BOTONES DE EDICIÓN PARA LAB LIBRE */}
                     {options.isBuilder && (
                         <div className="absolute top-2 right-2 flex justify-center gap-1 mb-2 print:hidden hide-on-pdf z-30">
                             <button onClick={function(e){ e.stopPropagation(); if(options.onEdit) options.onEdit(); }} className="text-slate-400 hover:text-amber-500 text-[9px] uppercase font-bold flex items-center gap-1 transition-colors bg-slate-800/80 px-2 py-1.5 rounded border border-slate-700">
@@ -709,7 +708,7 @@
                             {stringsArray.map(function(sIdx) { return <div key={sIdx} className="w-px bg-gradient-to-r from-slate-400 to-slate-500 opacity-60 h-full relative print:bg-black/30 z-0" />; })}
                             {fretsArray.map(function(i) { return <div key={i} className="absolute w-full bg-slate-600 shadow-[0_1px_1px_rgba(0,0,0,0.2)] print:bg-black/50 print:shadow-none z-0" style={{ height: '2px', top: i === numFrets ? 'calc(100% - 2px)' : (i / numFrets * 100) + '%' }} />; })}
                             
-                            {/* CAPA DE ESCALAS (Puntos violetas/fucsia con nombres de grado o nota) */}
+                            {/* CAPA DE ESCALAS */}
                             {!isBlind && options.showScales && fretsArray.map(function(fretIdx) {
                                 const actualFret = startFret + fretIdx;
                                 if (actualFret > startFret + numFrets - 1) return null;
@@ -880,7 +879,7 @@
             const [savedProgressions, setSavedProgressions] = useLocalStorage('dm_saved_progs_v25', []);
 
             const [labelMode, setLabelMode] = useState('intervals');
-            const [notationMode, setNotationMode] = useState('anglo'); // 'anglo' o 'latin'
+            const [notationMode, setNotationMode] = useState('anglo'); 
             const [leftHanded, setLeftHanded] = useState(false);
             const [audioMode, setAudioMode] = useState('strum'); 
             const [isMuted, setIsMuted] = useState(false);
@@ -909,12 +908,12 @@
 
             // ESTADO MODO LIBRE 
             const [freeModeTab, setFreeModeTab] = useState('single'); 
-            const [freeRoot, setFreeRoot] = useState('C'); // internamente siempre C, C#, etc.
+            const [freeRoot, setFreeRoot] = useState('C'); 
             const [freeQuality, setFreeQuality] = useState('maj');
             const [freeDrop, setFreeDrop] = useState('closed');
             const [freeBassString, setFreeBassString] = useState(6);
             const [builderSeq, setBuilderSeq] = useState([]);
-            const [editingIndex, setEditingIndex] = useState(null); // NUEVO: Para edición de progresión
+            const [editingIndex, setEditingIndex] = useState(null); 
 
             // ESTADO: RECONOCEDOR INVERSO
             const [reverseNotes, setReverseNotes] = useState([]);
@@ -1142,7 +1141,6 @@
                 }
             }, [appTrack]);
 
-            // Fix Mismatch de Cuerdas Dinámico
             useEffect(function() {
                 const avail = VALID_BASS_STRINGS[freeDrop] || [6,5,4];
                 if (avail.indexOf(freeBassString) === -1) setFreeBassString(avail[0]);
@@ -1158,7 +1156,6 @@
                 if (avail2.indexOf(mixBass2) === -1) setMixBass2(avail2[0]);
             }, [mixDrop2]);
 
-            // CUANDO CAMBIA NOTATION MODE ACTUALIZAMOS EL TEXTO EN LA SECUENCIA DE BUILDER
             useEffect(function() {
                 if (builderSeq.length > 0) {
                     setBuilderSeq(function(prev) {
@@ -1385,19 +1382,15 @@
                     
                     interval = setInterval(function() {
                         const s = metroState.current;
-                        const isAccent = s.beatInMeasure === 0;
-                        playClick(isAccent);
 
-                        if (s.beatInChord === 0) {
-                            if (sourceSequence[s.chordIdx]) {
-                                playVoicing(sourceSequence[s.chordIdx].fingering);
-                            }
+                        // 1. Verificar si toca avanzar AL INICIO del beat
+                        let currentDurationMultiplier = 1;
+                        if (activeTab === 'study' && studyChords[s.chordIdx] && studyChords[s.chordIdx].duration) {
+                            currentDurationMultiplier = studyChords[s.chordIdx].duration;
                         }
+                        const targetBeats = beatsPerChord * currentDurationMultiplier;
 
-                        s.beatInMeasure = (s.beatInMeasure + 1) % beatsPerMeasure;
-                        s.beatInChord++;
-                        
-                        if (s.beatInChord >= beatsPerChord) {
+                        if (s.beatInChord >= targetBeats) {
                             s.beatInChord = 0;
                             s.chordIdx++;
                             if (s.chordIdx >= sourceSequence.length) {
@@ -1410,15 +1403,30 @@
                                 }
                             }
                         }
-                        
+
+                        // 2. Reproducir sonido y metrónomo EN EL TIEMPO EXACTO
+                        const isAccent = s.beatInMeasure === 0;
+                        playClick(isAccent);
+
+                        if (s.beatInChord % beatsPerMeasure === 0) {
+                            if (sourceSequence[s.chordIdx]) {
+                                playVoicing(sourceSequence[s.chordIdx].fingering);
+                            }
+                        }
+
+                        // 3. Actualizar UI al mismo tiempo
                         setActiveChordIdx(s.chordIdx);
                         if (activeTab === 'study') setStudyProgressionStep(s.chordIdx);
                         setCurrentRep(s.rep);
+
+                        // 4. Incrementar para el siguiente tick
+                        s.beatInMeasure = (s.beatInMeasure + 1) % beatsPerMeasure;
+                        s.beatInChord++;
                         
                     }, 60000 / bpm);
                 }
                 return function() { if (interval) clearInterval(interval); };
-            }, [isPlaying, bpm, beatsPerMeasure, beatsPerChord, repetitions, optimalPathData, builderSeq, activeTab]);
+            }, [isPlaying, bpm, beatsPerMeasure, beatsPerChord, repetitions, optimalPathData, builderSeq, activeTab, studyChords]);
 
             const isProgressionComplete = studyChords.length > 0 && optimalPathData.length === studyChords.length;
 
@@ -1428,8 +1436,6 @@
                 return generateChordData(freeRoot, freeQuality, freeDrop, freeBassString, activeQuals, null, appTrack, notationMode);
             }, [freeRoot, freeQuality, freeDrop, freeBassString, activeQuals, appTrack, notationMode]);
 
-            // --- FUNCIONES DEL SECUENCIADOR ---
-            
             function updateSequenceFrom(seq, startIndex) {
                  let newSeq = [...seq];
                  for(let i = startIndex; i < newSeq.length; i++) {
@@ -2239,4 +2245,4 @@
         root.render(<App />);
     </script>
 </body>
-    </html>
+</html>
