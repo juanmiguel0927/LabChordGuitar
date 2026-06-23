@@ -35,8 +35,8 @@
         .glass-panel { background: rgba(15, 23, 42, 0.7); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.05); }
     </style>
 </head>
-<body class="pb-32">
-    <div id="root"></div>
+<body class="pb-32 flex flex-col min-h-screen">
+    <div id="root" class="flex-grow"></div>
 
     <script type="text/babel">
         const { useState, useMemo, useEffect, useRef } = React;
@@ -533,71 +533,154 @@
         };
 
         // --- MOTOR DE ANÁLISIS DE ACORDES (RECONOCEDOR INVERSO) ---
-        const analyzeChord = function(notes, notationMode = 'anglo') {
+        const analyzeChord = function(notes, notationMode = 'anglo', enharmonicMod = 'flat') {
             if (notes.length < 2) return [];
             
             const uniquePitchClasses = [...new Set(notes.map(function(n) { return n.note % 12; }))];
             const lowestNote = Math.min.apply(null, notes.map(function(n){ return n.note; }));
             const bassPitchClass = lowestNote % 12;
 
-            let matches = [];
             const allQualities = TRIAD_QUALITIES.concat(QUAD_QUALITIES).concat(TENSION_QUALITIES).concat(SHELL_QUALITIES);
 
-            uniquePitchClasses.forEach(function(rootPC) {
+            const extendedIntervals = {
+                'maj9': [0, 2, 4, 7, 11],
+                '13': [0, 2, 4, 7, 9, 10], 
+                'm9': [0, 2, 3, 7, 10],
+                'm11': [0, 3, 5, 7, 10], 
+                '7b9': [0, 1, 4, 7, 10],
+                '7alt': [0, 3, 4, 8, 10] 
+            };
+
+            const templates = [
+                { id: 'Mayor', ivls: [0,4,7] },
+                { id: 'm', ivls: [0,3,7] },
+                { id: 'dim', ivls: [0,3,6] },
+                { id: 'aug', ivls: [0,4,8] },
+                { id: 'sus2', ivls: [0,2,7] },
+                { id: 'sus4', ivls: [0,5,7] },
+                { id: '5', ivls: [0,7] },
+                
+                { id: '7', ivls: [0,4,7,10] },
+                { id: '7', ivls: [0,4,10] }, 
+                { id: 'm7', ivls: [0,3,7,10] },
+                { id: 'm7', ivls: [0,3,10] }, 
+                { id: 'Maj7', ivls: [0,4,7,11] },
+                { id: 'Maj7', ivls: [0,4,11] }, 
+                { id: 'm7b5', ivls: [0,3,6,10] },
+                { id: 'dim7', ivls: [0,3,6,9] },
+                { id: 'm(Maj7)', ivls: [0,3,7,11] },
+                { id: 'm(Maj7)', ivls: [0,3,11] },
+                { id: '7sus4', ivls: [0,5,7,10] },
+                { id: '7sus4', ivls: [0,5,10] },
+                { id: 'Maj7sus4', ivls: [0,5,7,11] },
+                { id: 'Maj7sus4', ivls: [0,5,11] },
+                
+                { id: '6', ivls: [0,4,7,9] },
+                { id: '6', ivls: [0,4,9] }, 
+                { id: 'm6', ivls: [0,3,7,9] },
+                { id: 'm6', ivls: [0,3,9] }, 
+
+                { id: '9', ivls: [0,2,4,7,10] },
+                { id: '9', ivls: [0,2,4,10] }, 
+                { id: 'm9', ivls: [0,2,3,7,10] },
+                { id: 'm9', ivls: [0,2,3,10] }, 
+                { id: 'Maj9', ivls: [0,2,4,7,11] },
+                { id: 'Maj9', ivls: [0,2,4,11] }, 
+                { id: '7b9', ivls: [0,1,4,7,10] },
+                { id: '7b9', ivls: [0,1,4,10] }, 
+                { id: '7#9', ivls: [0,3,4,7,10] },
+                { id: '7#9', ivls: [0,3,4,10] }, 
+                { id: 'm7b9', ivls: [0,1,3,7,10] },
+                { id: 'm7b9', ivls: [0,1,3,10] }, 
+                { id: '9sus4', ivls: [0,2,5,7,10] },
+                { id: '9sus4', ivls: [0,2,5,10] },
+
+                { id: '11', ivls: [0,2,4,5,7,10] },
+                { id: '11', ivls: [0,2,4,5,10] },
+                { id: '11', ivls: [0,2,5,10] }, 
+                { id: '11', ivls: [0,5,7,10] }, 
+                { id: 'm11', ivls: [0,2,3,5,7,10] },
+                { id: 'm11', ivls: [0,2,3,5,10] },
+                { id: 'm11', ivls: [0,3,5,7,10] }, 
+                { id: 'm11', ivls: [0,3,5,10] }, 
+                { id: 'Maj11', ivls: [0,2,4,5,7,11] },
+                { id: 'Maj11', ivls: [0,2,4,5,11] },
+                { id: '7#11', ivls: [0,4,6,7,10] },
+                { id: '7#11', ivls: [0,4,6,10] },
+                { id: '7#11', ivls: [0,2,4,6,10] }, 
+                
+                { id: '13', ivls: [0,2,4,5,7,9,10] },
+                { id: '13', ivls: [0,2,4,7,9,10] },
+                { id: '13', ivls: [0,2,4,9,10] },
+                { id: '13', ivls: [0,4,7,9,10] }, 
+                { id: '13', ivls: [0,4,9,10] }, 
+                { id: 'm13', ivls: [0,2,3,5,7,9,10] },
+                { id: 'm13', ivls: [0,2,3,7,9,10] },
+                { id: 'm13', ivls: [0,2,3,9,10] },
+                { id: 'Maj13', ivls: [0,2,4,5,7,9,11] },
+                { id: 'Maj13', ivls: [0,2,4,7,9,11] },
+                { id: 'Maj13', ivls: [0,2,4,9,11] },
+                { id: '7b13', ivls: [0,4,7,8,10] },
+                { id: '7b13', ivls: [0,4,8,10] },
+                { id: '7alt', ivls: [0,3,4,8,10] }, 
+                { id: '7alt', ivls: [0,1,4,8,10] }, 
+                { id: '7alt', ivls: [0,3,4,6,10] }, 
+                { id: '7alt', ivls: [0,1,4,6,10] }  
+            ];
+
+            let matches = [];
+            const NOTE_NAMES_SHARP = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+            const NOTE_NAMES_FLAT = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B'];
+            const noteMap = enharmonicMod === 'sharp' ? NOTE_NAMES_SHARP : NOTE_NAMES_FLAT;
+
+            for (let rootPC = 0; rootPC < 12; rootPC++) {
                 let intervals = uniquePitchClasses.map(function(pc) { return (pc - rootPC + 12) % 12; });
                 intervals.sort(function(a, b) { return a - b; });
-                
-                allQualities.forEach(function(q) {
-                    let qIntervals = [];
-                    if (q.intervals) {
-                        qIntervals = q.intervals.map(function(i) { return i % 12; });
-                    } else if (q.stacks) {
-                        qIntervals = q.stacks[0].map(function(i) { return i % 12; });
-                    }
-                    qIntervals = [...new Set(qIntervals)].sort(function(a,b) { return a - b; });
+                const intervalsStr = intervals.join(',');
 
-                    const isExactMatch = intervals.length === qIntervals.length && intervals.every(function(v, i) { return v === qIntervals[i]; });
-                    let isMatch = isExactMatch;
-                    
-                    if (!isExactMatch && intervals.length >= 3 && qIntervals.indexOf(7) !== -1) {
-                         const missingFifth = qIntervals.filter(function(i) { return i !== 7; });
-                         if (intervals.length === missingFifth.length && intervals.every(function(v,i) { return v === missingFifth[i]; })) {
-                             isMatch = true;
-                         }
-                    }
-
-                    if (isMatch) {
-                        const rootRaw = DISPLAY_NOTES.find(function(n) { return NOTE_TO_MIDI[n.replace('m','')] === rootPC; }) || MIDI_TO_NOTE_SHARP[rootPC];
+                templates.forEach(function(t) {
+                    const tStr = [...t.ivls].sort(function(a,b) { return a-b; }).join(',');
+                    if (intervalsStr === tStr) {
+                        const rootRaw = noteMap[rootPC];
                         const rootName = translateNote(rootRaw, notationMode);
                         
                         let bassName = "";
-                        const bassRaw = bassPitchClass !== rootPC ? (DISPLAY_NOTES.find(function(n) { return NOTE_TO_MIDI[n.replace('m','')] === bassPitchClass; }) || MIDI_TO_NOTE_SHARP[bassPitchClass]) : '';
-                        if (bassRaw) bassName = "/" + translateNote(bassRaw, notationMode);
+                        if (bassPitchClass !== rootPC) {
+                            const bassRaw = noteMap[bassPitchClass];
+                            bassName = "/" + translateNote(bassRaw, notationMode);
+                        }
+
+                        let score = 0;
+                        if (uniquePitchClasses.indexOf(rootPC) !== -1) score += 10; 
+                        else score -= 5; 
                         
-                        let labelQ = q.label.split(' (')[0];
-                        if (labelQ === ' Mayor' || labelQ === ' ') labelQ = '';
+                        if (bassPitchClass === rootPC) score += 5; 
+
+                        let labelQ = t.id;
+                        if (labelQ === 'Mayor') labelQ = '';
                         
                         matches.push({
                             name: rootName + labelQ + bassName,
-                            quality: q.label,
+                            quality: t.id,
                             root: rootName,
                             bass: bassName.replace('/', ''),
-                            intervals: intervals
+                            intervals: intervals,
+                            score: score
                         });
                     }
                 });
-            });
-            
-            const uniqueMatches = [];
-            const seenNames = new Set();
+            }
+
+            let uniqueMap = {};
             matches.forEach(function(m) {
-                if (!seenNames.has(m.name)) {
-                    seenNames.add(m.name);
-                    uniqueMatches.push(m);
+                if (!uniqueMap[m.name] || uniqueMap[m.name].score < m.score) {
+                    uniqueMap[m.name] = m;
                 }
             });
 
-            return uniqueMatches;
+            const results = [];
+            for (let key in uniqueMap) { results.push(uniqueMap[key]); }
+            return results.sort(function(a, b) { return b.score - a.score; });
         };
 
         const getVoiceLeadingDistance = function(source, target) {
@@ -708,7 +791,7 @@
                             {stringsArray.map(function(sIdx) { return <div key={sIdx} className="w-px bg-gradient-to-r from-slate-400 to-slate-500 opacity-60 h-full relative print:bg-black/30 z-0" />; })}
                             {fretsArray.map(function(i) { return <div key={i} className="absolute w-full bg-slate-600 shadow-[0_1px_1px_rgba(0,0,0,0.2)] print:bg-black/50 print:shadow-none z-0" style={{ height: '2px', top: i === numFrets ? 'calc(100% - 2px)' : (i / numFrets * 100) + '%' }} />; })}
                             
-                            {/* CAPA DE ESCALAS */}
+                            {/* CAPA DE ESCALAS (Puntos violetas/fucsia con nombres de grado o nota) */}
                             {!isBlind && options.showScales && fretsArray.map(function(fretIdx) {
                                 const actualFret = startFret + fretIdx;
                                 if (actualFret > startFret + numFrets - 1) return null;
@@ -809,15 +892,23 @@
         };
 
         // --- COMPONENTE DIAPASÓN INTERACTIVO (RECONOCEDOR INVERSO) ---
-        const InteractiveFretboard = function({ selectedNotes, onToggleNote, leftHanded, notationMode }) {
+        const InteractiveFretboard = function({ selectedNotes, onToggleNote, leftHanded, notationMode, enharmonicMod }) {
             const numFrets = 15;
             const stringsArray = leftHanded ? [0, 1, 2, 3, 4, 5] : [5, 4, 3, 2, 1, 0];
             const fretsArray = [];
             for(let i=0; i<=numFrets; i++) fretsArray.push(i);
             
-            const noteNamesAnglo = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B'];
-            const noteNamesLatin = ['Do', 'Reb', 'Re', 'Mib', 'Mi', 'Fa', 'Solb', 'Sol', 'Lab', 'La', 'Sib', 'Si'];
-            const noteNames = notationMode === 'latin' ? noteNamesLatin : noteNamesAnglo;
+            const noteNamesAngloFlat = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B'];
+            const noteNamesAngloSharp = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+            const noteNamesLatinFlat = ['Do', 'Reb', 'Re', 'Mib', 'Mi', 'Fa', 'Solb', 'Sol', 'Lab', 'La', 'Sib', 'Si'];
+            const noteNamesLatinSharp = ['Do', 'Do#', 'Re', 'Re#', 'Mi', 'Fa', 'Fa#', 'Sol', 'Sol#', 'La', 'La#', 'Si'];
+
+            let noteNames = [];
+            if (notationMode === 'latin') {
+                noteNames = enharmonicMod === 'sharp' ? noteNamesLatinSharp : noteNamesLatinFlat;
+            } else {
+                noteNames = enharmonicMod === 'sharp' ? noteNamesAngloSharp : noteNamesAngloFlat;
+            }
 
             return (
                 <div className="relative flex justify-between w-full max-w-[200px] border-4 border-[#1a1511] bg-[#2a241e] shadow-[inset_0_0_12px_rgba(0,0,0,0.9)] rounded-md transition-all mx-auto" style={{ height: '480px' }}>
@@ -866,6 +957,7 @@
 
         // --- APP PRINCIPAL ---
         const App = function() {
+            const [masterScreen, setMasterScreen] = useState('hub'); // NUEVO ESTADO: 'hub', 'acordes', 'mastil'
             const [appTrack, setAppTrack] = useState(null); 
             const [activeTab, setActiveTab] = useState('study'); 
             const [showHelp, setShowHelp] = useState(false);
@@ -880,6 +972,7 @@
 
             const [labelMode, setLabelMode] = useState('intervals');
             const [notationMode, setNotationMode] = useState('anglo'); 
+            const [enharmonicMod, setEnharmonicMod] = useState('flat'); // NUEVO ESTADO: 'flat', 'sharp'
             const [leftHanded, setLeftHanded] = useState(false);
             const [audioMode, setAudioMode] = useState('strum'); 
             const [isMuted, setIsMuted] = useState(false);
@@ -917,7 +1010,7 @@
 
             // ESTADO: RECONOCEDOR INVERSO
             const [reverseNotes, setReverseNotes] = useState([]);
-            const detectedChords = useMemo(function() { return analyzeChord(reverseNotes, notationMode); }, [reverseNotes, notationMode]);
+            const detectedChords = useMemo(function() { return analyzeChord(reverseNotes, notationMode, enharmonicMod); }, [reverseNotes, notationMode, enharmonicMod]);
 
             // ESTADO METRÓNOMO
             const [isPlaying, setIsPlaying] = useState(false);
@@ -1080,33 +1173,35 @@
             const setCompletedList = appTrack === 'triads' ? setCompletedTriads : appTrack === 'shells' ? setCompletedShells : appTrack === 'tensions' ? setCompletedTensions : setCompletedQuads;
 
             useEffect(function() {
-                if (studyProgressionStep >= 0 && !isPlaying && activeTab === 'study') {
+                if (studyProgressionStep >= 0 && !isPlaying && activeTab === 'study' && masterScreen === 'acordes') {
                     const stepEl = document.getElementById("chord-step-" + studyProgressionStep);
                     if (stepEl) stepEl.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
                     
                     const fbEl = document.getElementById("fretboard-wrap-" + studyProgressionStep);
                     if (fbEl) fbEl.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
                 }
-            }, [studyProgressionStep, isPlaying, activeTab]);
+            }, [studyProgressionStep, isPlaying, activeTab, masterScreen]);
 
             useEffect(function() {
-                if (isPlaying) {
+                if (isPlaying && masterScreen === 'acordes') {
                     const stepEl = document.getElementById("chord-step-" + activeChordIdx);
                     if (stepEl) stepEl.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
                     
                     const fbEl = document.getElementById("fretboard-wrap-" + activeChordIdx);
                     if (fbEl) fbEl.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
                 }
-            }, [activeChordIdx, isPlaying]);
+            }, [activeChordIdx, isPlaying, masterScreen]);
 
             useEffect(function() {
-                const activeModuleBtn = document.getElementById("module-btn-" + currentModuleIdx);
-                if (activeModuleBtn) {
-                    setTimeout(function() {
-                        activeModuleBtn.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
-                    }, 50);
+                if (masterScreen === 'acordes') {
+                    const activeModuleBtn = document.getElementById("module-btn-" + currentModuleIdx);
+                    if (activeModuleBtn) {
+                        setTimeout(function() {
+                            activeModuleBtn.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+                        }, 50);
+                    }
                 }
-            }, [currentModuleIdx]);
+            }, [currentModuleIdx, masterScreen]);
 
             useEffect(function() {
                 setSelectedPath([]);
@@ -1565,12 +1660,86 @@
                 return STUDY_PLAN_QUADS.length;
             };
 
-            const currentlyActiveStepIdx = isPlaying ? activeChordIdx : studyProgressionStep;
+            // RENDER: PANTALLAS PRINCIPALES
+
+            if (masterScreen === 'hub') {
+                return (
+                    <div className="min-h-screen bg-[#020617] flex flex-col items-center justify-center p-6 relative overflow-hidden">
+                        <div className="absolute top-[-20%] left-[-10%] w-[50vw] h-[50vw] max-w-[600px] max-h-[600px] bg-amber-600/10 rounded-full blur-[100px] pointer-events-none"></div>
+                        <div className="absolute bottom-[-20%] right-[-10%] w-[50vw] h-[50vw] max-w-[600px] max-h-[600px] bg-sky-600/10 rounded-full blur-[100px] pointer-events-none"></div>
+
+                        <div className="z-10 text-center mb-10 mt-8 animate-in fade-in slide-in-from-bottom-8 duration-700">
+                            <div className="inline-flex items-center justify-center p-4 bg-slate-900/80 rounded-3xl border border-slate-800 shadow-2xl mb-6">
+                                <Icon name="GraduationCap" size={64} className="text-amber-500 drop-shadow-[0_0_15px_rgba(245,158,11,0.5)]" />
+                            </div>
+                            <h1 className="text-5xl md:text-7xl font-black text-slate-100 tracking-tighter mb-4 drop-shadow-lg">
+                                Conservatorio <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-orange-500">Master</span>
+                            </h1>
+                            <p className="text-slate-400 text-lg md:text-xl max-w-2xl mx-auto font-medium">La suite definitiva para el dominio de la armonía y el diapasón.</p>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-10 w-full max-w-5xl z-10 animate-in fade-in zoom-in-95 duration-700 delay-150">
+                            <button onClick={() => setMasterScreen('acordes')} className="group relative p-[2px] rounded-[2rem] bg-gradient-to-br from-slate-800 to-slate-900 hover:from-amber-400 hover:to-orange-600 transition-all duration-500 text-left shadow-2xl hover:shadow-[0_10px_40px_rgba(245,158,11,0.2)] hover:-translate-y-2 overflow-hidden">
+                                <div className="absolute inset-0 bg-slate-900 opacity-0 group-hover:opacity-10 transition-opacity"></div>
+                                <div className="bg-[#0b1120] p-8 md:p-12 rounded-[1.9rem] h-full flex flex-col relative z-10">
+                                    <div className="bg-slate-800 w-16 h-16 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-500 shadow-inner border border-slate-700 group-hover:border-amber-500/50 group-hover:bg-amber-500/10">
+                                        <Icon name="Layers" size={32} className="text-slate-300 group-hover:text-amber-400 transition-colors" />
+                                    </div>
+                                    <h2 className="text-2xl md:text-3xl font-black text-slate-100 mb-3 tracking-tight">Laboratorio de Acordes</h2>
+                                    <p className="text-slate-400 text-sm leading-relaxed mb-6">Generador avanzado de voicings, drops, shells y tensiones. Estudia progresiones reales y analiza el voice leading matemático.</p>
+                                    <div className="mt-auto flex items-center text-amber-500 font-bold text-sm tracking-widest uppercase gap-2 group-hover:gap-3 transition-all">
+                                        Iniciar Módulo <Icon name="ArrowRight" size={16} />
+                                    </div>
+                                </div>
+                            </button>
+
+                            <button onClick={() => setMasterScreen('mastil')} className="group relative p-[2px] rounded-[2rem] bg-gradient-to-br from-slate-800 to-slate-900 hover:from-sky-400 hover:to-indigo-600 transition-all duration-500 text-left shadow-2xl hover:shadow-[0_10px_40px_rgba(56,189,248,0.2)] hover:-translate-y-2 overflow-hidden">
+                                <div className="absolute inset-0 bg-slate-900 opacity-0 group-hover:opacity-10 transition-opacity"></div>
+                                <div className="bg-[#0b1120] p-8 md:p-12 rounded-[1.9rem] h-full flex flex-col relative z-10">
+                                    <div className="bg-slate-800 w-16 h-16 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-500 shadow-inner border border-slate-700 group-hover:border-sky-500/50 group-hover:bg-sky-500/10">
+                                        <Icon name="Music" size={32} className="text-slate-300 group-hover:text-sky-400 transition-colors" />
+                                    </div>
+                                    <h2 className="text-2xl md:text-3xl font-black text-slate-100 mb-3 tracking-tight">Mástil Interactivo</h2>
+                                    <p className="text-slate-400 text-sm leading-relaxed mb-6">Herramienta externa para visualizar escalas, arpegios y mapeo del diapasón. Explora la geometría de la guitarra al instante.</p>
+                                    <div className="mt-auto flex items-center text-sky-400 font-bold text-sm tracking-widest uppercase gap-2 group-hover:gap-3 transition-all">
+                                        Explorar Herramienta <Icon name="ArrowRight" size={16} />
+                                    </div>
+                                </div>
+                            </button>
+                        </div>
+                        
+                        <div className="absolute bottom-6 text-slate-600 text-[10px] font-bold tracking-widest uppercase">
+                            Desarrollado por Juan Miguel Rios Redondo
+                        </div>
+                    </div>
+                );
+            }
+
+            if (masterScreen === 'mastil') {
+                return (
+                    <div className="h-screen w-full bg-[#020617] flex flex-col absolute inset-0 z-50">
+                        <div className="flex items-center justify-between p-4 bg-slate-900 border-b border-slate-800 shrink-0 shadow-md">
+                            <div className="flex items-center gap-3 text-sky-400 font-black text-lg">
+                                <Icon name="Music" size={24} /> Mástil Interactivo
+                            </div>
+                            <button onClick={() => setMasterScreen('hub')} className="bg-slate-800 hover:bg-rose-500/20 text-slate-300 hover:text-rose-400 px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 transition-all border border-slate-700 hover:border-rose-500/50">
+                                <Icon name="X" size={16} /> Cerrar Visualizador
+                            </button>
+                        </div>
+                        <div className="flex-1 w-full bg-black relative">
+                            <iframe src="https://juanmiguel0927.github.io/Mastil/" className="absolute inset-0 w-full h-full border-none" title="Mástil Interactivo" allowFullScreen></iframe>
+                        </div>
+                    </div>
+                );
+            }
 
             if (!appTrack) {
                 return (
-                    <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-4">
-                        <div className="glass-panel p-6 md:p-10 rounded-[2rem] text-center w-full max-w-5xl shadow-2xl animate-in zoom-in-95 border border-slate-800">
+                    <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-4 relative">
+                        <button onClick={() => setMasterScreen('hub')} className="absolute top-6 left-6 text-slate-400 hover:text-amber-500 flex items-center gap-2 font-bold transition-colors bg-slate-900 px-4 py-2 rounded-xl border border-slate-800 z-50 shadow-lg">
+                            <Icon name="ArrowLeft" size={16}/> Volver al Menú Principal
+                        </button>
+                        <div className="glass-panel p-6 md:p-10 rounded-[2rem] text-center w-full max-w-5xl shadow-2xl animate-in zoom-in-95 border border-slate-800 mt-12">
                             <div className="flex justify-center mb-6 text-amber-500"><Icon name="GraduationCap" size={64} /></div>
                             <h1 className="text-3xl md:text-5xl font-black mb-6 text-slate-100 tracking-tight">LABORATORIO DE ACORDES</h1>
                             <p className="text-slate-400 mb-10 text-sm md:text-base leading-relaxed max-w-2xl mx-auto">
@@ -2116,16 +2285,21 @@
                                             <h2 className="text-2xl font-black text-amber-500 flex items-center gap-3"><Icon name="Search" size={28}/> Reconocedor de Acordes Inverso</h2>
                                             <p className="text-slate-400 text-sm mt-2">Haz clic en el diapasón interactivo para ubicar las notas. El motor analizará tu postura y te mostrará el acorde exacto.</p>
                                         </div>
-                                        {reverseNotes.length > 0 && (
-                                            <button onClick={function(){setReverseNotes([]);}} className="text-slate-400 hover:text-rose-500 flex items-center gap-2 text-sm font-bold transition-colors bg-slate-800 px-4 py-2 rounded-xl border border-slate-700 shrink-0">
-                                                <Icon name="Trash2" size={16}/> Limpiar Notas
+                                        <div className="flex gap-2 shrink-0">
+                                            <button onClick={function(){setEnharmonicMod(enharmonicMod === 'flat' ? 'sharp' : 'flat');}} className="text-slate-400 hover:text-sky-400 flex items-center gap-2 text-sm font-bold transition-colors bg-slate-800 px-4 py-2 rounded-xl border border-slate-700">
+                                                <Icon name="Shuffle" size={16}/> {enharmonicMod === 'flat' ? 'b Bemoles' : '# Sostenidos'}
                                             </button>
-                                        )}
+                                            {reverseNotes.length > 0 && (
+                                                <button onClick={function(){setReverseNotes([]);}} className="text-slate-400 hover:text-rose-500 flex items-center gap-2 text-sm font-bold transition-colors bg-slate-800 px-4 py-2 rounded-xl border border-slate-700">
+                                                    <Icon name="Trash2" size={16}/> Limpiar Notas
+                                                </button>
+                                            )}
+                                        </div>
                                     </div>
                                     
                                     <div className="flex flex-col lg:flex-row gap-10">
                                         <div className="flex-1 w-full max-w-[280px] mx-auto">
-                                            <InteractiveFretboard selectedNotes={reverseNotes} onToggleNote={toggleReverseNote} leftHanded={leftHanded} notationMode={notationMode} />
+                                            <InteractiveFretboard selectedNotes={reverseNotes} onToggleNote={toggleReverseNote} leftHanded={leftHanded} notationMode={notationMode} enharmonicMod={enharmonicMod} />
                                         </div>
                                         
                                         <div className="flex-1 flex flex-col justify-start bg-[#0f172a] p-6 md:p-8 rounded-2xl border border-slate-800">
@@ -2245,4 +2419,4 @@
         root.render(<App />);
     </script>
 </body>
-</html>
+    </html>
