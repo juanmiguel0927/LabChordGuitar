@@ -9,6 +9,7 @@
     <script src="https://unpkg.com/babel-standalone@6/babel.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&display=swap');
         body { font-family: 'Inter', sans-serif; background-color: #020617; color: #e2e8f0; scroll-behavior: smooth; }
@@ -35,13 +36,12 @@
         .glass-panel { background: rgba(15, 23, 42, 0.7); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.05); }
     </style>
 </head>
-<body class="pb-32 flex flex-col min-h-screen">
-    <div id="root" class="flex-grow"></div>
+<body class="pb-32">
+    <div id="root"></div>
 
     <script type="text/babel">
         const { useState, useMemo, useEffect, useRef } = React;
 
-        // --- ICONOS SVG COMPATIBLES ---
         const Icon = function(props) {
             const name = props.name;
             const size = props.size || 24;
@@ -85,7 +85,60 @@
             );
         };
 
-        // --- COMPONENTE DE CABECERA/PIE DE PÁGINA PARA PDF ---
+        const CustomModal = function({ config, onClose }) {
+            if (!config.isOpen) return null;
+            const [inputValue, setInputValue] = useState(config.defaultValue || '');
+
+            useEffect(function() {
+                setInputValue(config.defaultValue || '');
+            }, [config]);
+
+            const handleConfirm = function() {
+                if (config.type === 'prompt') {
+                    if (config.onConfirm) config.onConfirm(inputValue);
+                } else if (config.type === 'confirm') {
+                    if (config.onConfirm) config.onConfirm(true);
+                } else {
+                    if (config.onConfirm) config.onConfirm();
+                }
+                onClose();
+            };
+
+            const handleCancel = function() {
+                if (config.type === 'confirm' && config.onCancel) config.onCancel(false);
+                onClose();
+            };
+
+            return (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm print:hidden">
+                    <div className="bg-slate-900 border border-slate-700 rounded-3xl p-6 md:p-8 max-w-md w-full shadow-2xl relative animate-in zoom-in-95">
+                        <h3 className="text-xl font-bold text-amber-500 mb-4 flex items-center gap-2">
+                            {config.type === 'alert' ? <Icon name="AlertCircle" size={24}/> : config.type === 'confirm' ? <Icon name="Info" size={24}/> : <Icon name="Edit2" size={24}/>}
+                            {config.type === 'alert' ? 'Aviso' : config.type === 'confirm' ? 'Confirmación' : 'Entrada Requerida'}
+                        </h3>
+                        <p className="text-slate-300 mb-6">{config.message}</p>
+                        
+                        {config.type === 'prompt' && (
+                            <input 
+                                type="text" 
+                                className="w-full bg-[#0f172a] border border-slate-700 p-3 rounded-xl text-white font-bold focus:ring-2 ring-amber-500 outline-none transition-all mb-6"
+                                value={inputValue}
+                                onChange={function(e) { setInputValue(e.target.value); }}
+                                autoFocus
+                            />
+                        )}
+
+                        <div className="flex justify-end gap-3">
+                            {(config.type === 'confirm' || config.type === 'prompt') && (
+                                <button onClick={handleCancel} className="px-5 py-2.5 rounded-xl font-bold bg-slate-800 text-slate-300 hover:bg-slate-700 transition-colors">Cancelar</button>
+                            )}
+                            <button onClick={handleConfirm} className="px-5 py-2.5 rounded-xl font-bold bg-amber-500 text-slate-950 hover:bg-amber-400 transition-colors">Aceptar</button>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
         const PdfHeader = function({ title }) {
             return (
                 <div className="pdf-header text-center mb-10 pt-4" style={{display: 'none'}}>
@@ -105,7 +158,6 @@
             );
         };
 
-        // --- CUSTOM HOOK: LOCAL STORAGE ---
         function useLocalStorage(key, initialValue) {
             const [storedValue, setStoredValue] = useState(function() {
                 try {
@@ -123,7 +175,6 @@
             return [storedValue, setValue];
         }
 
-        // --- COMPONENTE TOOLTIP ---
         const Tooltip = function({ text, children }) {
             return (
                 <div className="group relative inline-flex items-center justify-center">
@@ -136,13 +187,13 @@
             );
         };
 
-        // --- DATOS MUSICALES, TRADUCCIÓN Y MOTOR DE ENHARMONÍA ---
         const NOTE_TO_MIDI = { 'C': 0, 'C#': 1, 'Db': 1, 'D': 2, 'D#': 3, 'Eb': 3, 'E': 4, 'F': 5, 'F#': 6, 'Gb': 6, 'G': 7, 'G#': 8, 'Ab': 8, 'A': 9, 'A#': 10, 'Bb': 10, 'B': 11 };
         const MIDI_TO_NOTE_SHARP = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
         const MIDI_TO_NOTE_FLAT = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B'];
         const DISPLAY_NOTES = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'Ab', 'A', 'Bb', 'B'];
 
         const LATIN_MAP = { 'C':'Do', 'C#':'Do#', 'Db':'Reb', 'D':'Re', 'D#':'Re#', 'Eb':'Mib', 'E':'Mi', 'F':'Fa', 'F#':'Fa#', 'Gb':'Solb', 'G':'Sol', 'G#':'Sol#', 'Ab':'Lab', 'A':'La', 'A#':'La#', 'Bb':'Sib', 'B':'Si' };
+        
         const translateNote = function(noteStr, mode) {
             if (mode !== 'latin' || !noteStr) return noteStr;
             let base = noteStr.replace('m', '');
@@ -170,7 +221,6 @@
         const INVERSION_NAMES_TRIADS = ['Fund.', '1ra Inv.', '2da Inv.'];
         const STRING_TUNINGS = [64, 59, 55, 50, 45, 40]; // 1ra a 6ta
 
-        // --- MAPA DE ESCALAS ESTRICTAS CON GRADOS Y TENSIONES ---
         const getScaleData = function(qualityId, degreeLabel) {
             let type = '';
             if (degreeLabel) {
@@ -215,7 +265,6 @@
             return scales[type] || scales['jonico'];
         };
 
-        // --- ACORDES Y CALIDADES ESTRUCTURADAS ---
         const TRIAD_QUALITIES = [
             { id: 'maj', label: ' Mayor', intervals: [0, 4, 7] },
             { id: 'min', label: 'm', intervals: [0, 3, 7] },
@@ -233,7 +282,6 @@
             { id: 'dim7', label: 'dim7', intervals: [0, 3, 6, 9] }
         ];
 
-        // SHELLS Y TENSIONES ESTRICTAS EN MODO STACK
         const SHELL_QUALITIES = [
             { id: 'maj7_sh', label: 'Maj7 (Shell)', stacks: [[0, 4, 11], [0, 11, 16]], names: ['1-3-7', '1-7-3'] },
             { id: '7_sh', label: '7 (Shell)', stacks: [[0, 4, 10], [0, 10, 16]], names: ['1-3-b7', '1-b7-3'] },
@@ -272,7 +320,6 @@
         const STUDY_KEYS = ['C', 'F', 'Bb', 'Eb']; // Tonos centrales para evitar extremos
         const STUDY_KEYS_MIN = ['Cm', 'Fm', 'Bbm', 'Ebm'];
 
-        // --- PLANES DE ESTUDIO ---
         const STUDY_PLAN_TRIADS = [
             { id: 't1', title: 'Cerradas (Set 3-2-1)', drop: 'closed', bass: 3 },
             { id: 't2', title: 'Cerradas (Set 4-3-2)', drop: 'closed', bass: 4 },
@@ -378,7 +425,6 @@
             return n.sort(function(a,b) { return a-b; });
         };
 
-        // ALGORITMO DINÁMICO DE BÚSQUEDA 
         const getOptimalFingering = function(baseNotes, bassString, dropType, appTrack) {
             let stringIdx = bassString - 1; 
             let allowedStrings = [5, 4, 3, 2, 1, 0];
@@ -532,155 +578,151 @@
             }).filter(function(d) { return d !== null; });
         };
 
-        // --- MOTOR DE ANÁLISIS DE ACORDES (RECONOCEDOR INVERSO) ---
-        const analyzeChord = function(notes, notationMode = 'anglo', enharmonicMod = 'flat') {
+        const analyzeChord = function(notes, notationMode = 'anglo') {
             if (notes.length < 2) return [];
             
-            const uniquePitchClasses = [...new Set(notes.map(function(n) { return n.note % 12; }))];
-            const lowestNote = Math.min.apply(null, notes.map(function(n){ return n.note; }));
-            const bassPitchClass = lowestNote % 12;
-
-            const allQualities = TRIAD_QUALITIES.concat(QUAD_QUALITIES).concat(TENSION_QUALITIES).concat(SHELL_QUALITIES);
-
-            const extendedIntervals = {
-                'maj9': [0, 2, 4, 7, 11],
-                '13': [0, 2, 4, 7, 9, 10], 
-                'm9': [0, 2, 3, 7, 10],
-                'm11': [0, 3, 5, 7, 10], 
-                '7b9': [0, 1, 4, 7, 10],
-                '7alt': [0, 3, 4, 8, 10] 
-            };
-
-            const templates = [
-                { id: 'Mayor', ivls: [0,4,7] },
-                { id: 'm', ivls: [0,3,7] },
-                { id: 'dim', ivls: [0,3,6] },
-                { id: 'aug', ivls: [0,4,8] },
-                { id: 'sus2', ivls: [0,2,7] },
-                { id: 'sus4', ivls: [0,5,7] },
-                { id: '5', ivls: [0,7] },
-                
-                { id: '7', ivls: [0,4,7,10] },
-                { id: '7', ivls: [0,4,10] }, 
-                { id: 'm7', ivls: [0,3,7,10] },
-                { id: 'm7', ivls: [0,3,10] }, 
-                { id: 'Maj7', ivls: [0,4,7,11] },
-                { id: 'Maj7', ivls: [0,4,11] }, 
-                { id: 'm7b5', ivls: [0,3,6,10] },
-                { id: 'dim7', ivls: [0,3,6,9] },
-                { id: 'm(Maj7)', ivls: [0,3,7,11] },
-                { id: 'm(Maj7)', ivls: [0,3,11] },
-                { id: '7sus4', ivls: [0,5,7,10] },
-                { id: '7sus4', ivls: [0,5,10] },
-                { id: 'Maj7sus4', ivls: [0,5,7,11] },
-                { id: 'Maj7sus4', ivls: [0,5,11] },
-                
-                { id: '6', ivls: [0,4,7,9] },
-                { id: '6', ivls: [0,4,9] }, 
-                { id: 'm6', ivls: [0,3,7,9] },
-                { id: 'm6', ivls: [0,3,9] }, 
-
-                { id: '9', ivls: [0,2,4,7,10] },
-                { id: '9', ivls: [0,2,4,10] }, 
-                { id: 'm9', ivls: [0,2,3,7,10] },
-                { id: 'm9', ivls: [0,2,3,10] }, 
-                { id: 'Maj9', ivls: [0,2,4,7,11] },
-                { id: 'Maj9', ivls: [0,2,4,11] }, 
-                { id: '7b9', ivls: [0,1,4,7,10] },
-                { id: '7b9', ivls: [0,1,4,10] }, 
-                { id: '7#9', ivls: [0,3,4,7,10] },
-                { id: '7#9', ivls: [0,3,4,10] }, 
-                { id: 'm7b9', ivls: [0,1,3,7,10] },
-                { id: 'm7b9', ivls: [0,1,3,10] }, 
-                { id: '9sus4', ivls: [0,2,5,7,10] },
-                { id: '9sus4', ivls: [0,2,5,10] },
-
-                { id: '11', ivls: [0,2,4,5,7,10] },
-                { id: '11', ivls: [0,2,4,5,10] },
-                { id: '11', ivls: [0,2,5,10] }, 
-                { id: '11', ivls: [0,5,7,10] }, 
-                { id: 'm11', ivls: [0,2,3,5,7,10] },
-                { id: 'm11', ivls: [0,2,3,5,10] },
-                { id: 'm11', ivls: [0,3,5,7,10] }, 
-                { id: 'm11', ivls: [0,3,5,10] }, 
-                { id: 'Maj11', ivls: [0,2,4,5,7,11] },
-                { id: 'Maj11', ivls: [0,2,4,5,11] },
-                { id: '7#11', ivls: [0,4,6,7,10] },
-                { id: '7#11', ivls: [0,4,6,10] },
-                { id: '7#11', ivls: [0,2,4,6,10] }, 
-                
-                { id: '13', ivls: [0,2,4,5,7,9,10] },
-                { id: '13', ivls: [0,2,4,7,9,10] },
-                { id: '13', ivls: [0,2,4,9,10] },
-                { id: '13', ivls: [0,4,7,9,10] }, 
-                { id: '13', ivls: [0,4,9,10] }, 
-                { id: 'm13', ivls: [0,2,3,5,7,9,10] },
-                { id: 'm13', ivls: [0,2,3,7,9,10] },
-                { id: 'm13', ivls: [0,2,3,9,10] },
-                { id: 'Maj13', ivls: [0,2,4,5,7,9,11] },
-                { id: 'Maj13', ivls: [0,2,4,7,9,11] },
-                { id: 'Maj13', ivls: [0,2,4,9,11] },
-                { id: '7b13', ivls: [0,4,7,8,10] },
-                { id: '7b13', ivls: [0,4,8,10] },
-                { id: '7alt', ivls: [0,3,4,8,10] }, 
-                { id: '7alt', ivls: [0,1,4,8,10] }, 
-                { id: '7alt', ivls: [0,3,4,6,10] }, 
-                { id: '7alt', ivls: [0,1,4,6,10] }  
-            ];
+            const uniquePitches = [...new Set(notes.map(function(n) { return n.note; }))].sort(function(a, b) { return a - b; });
+            const bassMidi = uniquePitches[0];
+            const uniquePitchClasses = [...new Set(uniquePitches.map(function(n) { return n % 12; }))];
 
             let matches = [];
-            const NOTE_NAMES_SHARP = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
-            const NOTE_NAMES_FLAT = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B'];
-            const noteMap = enharmonicMod === 'sharp' ? NOTE_NAMES_SHARP : NOTE_NAMES_FLAT;
 
-            for (let rootPC = 0; rootPC < 12; rootPC++) {
+            const dict = [
+                { id: 'Maj', name: '', intervals: [0,4,7], score: 10 },
+                { id: 'm', name: 'm', intervals: [0,3,7], score: 10 },
+                { id: 'dim', name: 'dim', intervals: [0,3,6], score: 9 },
+                { id: 'aug', name: 'aug', intervals: [0,4,8], score: 9 },
+                { id: 'sus2', name: 'sus2', intervals: [0,2,7], score: 8 },
+                { id: 'sus4', name: 'sus4', intervals: [0,5,7], score: 8 },
+                { id: 'Maj7', name: 'Maj7', intervals: [0,4,7,11], score: 12 },
+                { id: 'm7', name: 'm7', intervals: [0,3,7,10], score: 12 },
+                { id: '7', name: '7', intervals: [0,4,7,10], score: 12 },
+                { id: 'm7b5', name: 'm7b5', intervals: [0,3,6,10], score: 11 },
+                { id: 'dim7', name: 'dim7', intervals: [0,3,6,9], score: 11 },
+                { id: 'mM7', name: 'm(Maj7)', intervals: [0,3,7,11], score: 10 },
+                { id: '7sus4', name: '7sus4', intervals: [0,5,7,10], score: 10 },
+                { id: '6', name: '6', intervals: [0,4,7,9], score: 10 },
+                { id: 'm6', name: 'm6', intervals: [0,3,7,9], score: 10 },
+                { id: 'Maj7#5', name: 'Maj7#5', intervals: [0,4,8,11], score: 11 },
+                { id: '7#5', name: '7#5', intervals: [0,4,8,10], score: 11 },
+                { id: '7b5', name: '7b5', intervals: [0,4,6,10], score: 11 },
+                { id: 'add9', name: 'add9', intervals: [0,2,4,7], score: 9 },
+                { id: 'madd9', name: 'm(add9)', intervals: [0,2,3,7], score: 9 },
+                { id: '6/9', name: '6/9', intervals: [0,2,4,7,9], score: 10 },
+                { id: 'Maj9', name: 'Maj9', intervals: [0,2,4,7,11], score: 14 },
+                { id: 'm9', name: 'm9', intervals: [0,2,3,7,10], score: 14 },
+                { id: '9', name: '9', intervals: [0,2,4,7,10], score: 14 },
+                { id: '7b9', name: '7(b9)', intervals: [0,1,4,7,10], score: 13 },
+                { id: '7#9', name: '7(#9)', intervals: [0,3,4,7,10], score: 13 },
+                { id: 'Maj7#11', name: 'Maj7(#11)', intervals: [0,4,6,7,11], score: 13 },
+                { id: 'm7b9', name: 'm7(b9)', intervals: [0,1,3,7,10], score: 12 },
+                { id: '11', name: '11', intervals: [0,2,4,5,7,10], score: 15 },
+                { id: 'm11', name: 'm11', intervals: [0,2,3,5,7,10], score: 15 },
+                { id: '13', name: '13', intervals: [0,2,4,5,7,9,10], score: 16 },
+                { id: 'Maj13', name: 'Maj13', intervals: [0,2,4,5,7,9,11], score: 16 },
+                { id: 'Maj7_no5', name: 'Maj7(no5)', intervals: [0,4,11], score: 7 },
+                { id: '7_no5', name: '7(no5)', intervals: [0,4,10], score: 7 },
+                { id: 'm7_no5', name: 'm7(no5)', intervals: [0,3,10], score: 7 },
+                { id: 'm7b5_no5', name: 'm7b5(no5)', intervals: [0,6,10], score: 7 },
+                { id: 'Maj9_no5', name: 'Maj9(no5)', intervals: [0,2,4,11], score: 8 },
+                { id: '9_no5', name: '9(no5)', intervals: [0,2,4,10], score: 8 },
+                { id: 'm9_no5', name: 'm9(no5)', intervals: [0,2,3,10], score: 8 },
+            ];
+
+            uniquePitchClasses.forEach(function(rootPC) {
                 let intervals = uniquePitchClasses.map(function(pc) { return (pc - rootPC + 12) % 12; });
-                intervals.sort(function(a, b) { return a - b; });
-                const intervalsStr = intervals.join(',');
+                intervals.sort(function(a,b) { return a - b; });
 
-                templates.forEach(function(t) {
-                    const tStr = [...t.ivls].sort(function(a,b) { return a-b; }).join(',');
-                    if (intervalsStr === tStr) {
-                        const rootRaw = noteMap[rootPC];
-                        const rootName = translateNote(rootRaw, notationMode);
+                dict.forEach(function(def) {
+                    let isMatch = false;
+
+                    if (intervals.length === def.intervals.length && intervals.every(function(v, i) { return v === def.intervals[i]; })) {
+                        isMatch = true;
+                    } else if (!isMatch && intervals.length >= 3 && def.intervals.indexOf(7) !== -1 && def.id.indexOf('_no5') === -1) {
+                        const defNo5 = def.intervals.filter(function(i) { return i !== 7; });
+                        if (intervals.length === defNo5.length && intervals.every(function(v, i) { return v === defNo5[i]; })) {
+                            isMatch = true;
+                        }
+                    }
+
+                    if (!isMatch && intervals.length >= 3 && (def.id === '13' || def.id === 'Maj13' || def.id === '11' || def.id === 'm11')) {
+                        const minimalDef = def.intervals.filter(function(i) { return i !== 7 && i !== 2; }); 
+                        if (intervals.length === minimalDef.length && intervals.every(function(v, i) { return v === minimalDef[i]; })) {
+                            isMatch = true;
+                        }
+                    }
+
+                    if (isMatch) {
+                        const explicitRoot = notes.find(n => (n.note % 12) === rootPC && n.explicitEnharmonic);
+                        const rootPref = explicitRoot ? explicitRoot.explicitEnharmonic : 'sharps';
                         
+                        const rootRaw = rootPref === 'flats' ? MIDI_TO_NOTE_FLAT[rootPC] : MIDI_TO_NOTE_SHARP[rootPC];
+                        const rootName = translateNote(rootRaw, notationMode);
+
                         let bassName = "";
-                        if (bassPitchClass !== rootPC) {
-                            const bassRaw = noteMap[bassPitchClass];
+                        const bassPC = bassMidi % 12;
+                        if (bassPC !== rootPC) {
+                            const explicitBass = notes.find(n => (n.note % 12) === bassPC && n.explicitEnharmonic);
+                            const bassPref = explicitBass ? explicitBass.explicitEnharmonic : rootPref;
+                            const bassRaw = bassPref === 'flats' ? MIDI_TO_NOTE_FLAT[bassPC] : MIDI_TO_NOTE_SHARP[bassPC];
                             bassName = "/" + translateNote(bassRaw, notationMode);
                         }
 
-                        let score = 0;
-                        if (uniquePitchClasses.indexOf(rootPC) !== -1) score += 10; 
-                        else score -= 5; 
-                        
-                        if (bassPitchClass === rootPC) score += 5; 
+                        let finalScore = def.score + (bassPC === rootPC ? 5 : 0);
 
-                        let labelQ = t.id;
-                        if (labelQ === 'Mayor') labelQ = '';
-                        
                         matches.push({
-                            name: rootName + labelQ + bassName,
-                            quality: t.id,
+                            name: rootName + def.name + bassName,
+                            quality: def.name || 'Mayor',
                             root: rootName,
                             bass: bassName.replace('/', ''),
                             intervals: intervals,
-                            score: score
+                            score: finalScore
                         });
                     }
                 });
-            }
-
-            let uniqueMap = {};
-            matches.forEach(function(m) {
-                if (!uniqueMap[m.name] || uniqueMap[m.name].score < m.score) {
-                    uniqueMap[m.name] = m;
+                
+                const isAlt = intervals.indexOf(0) !== -1 && intervals.indexOf(4) !== -1 && intervals.indexOf(10) !== -1; 
+                if (isAlt && intervals.length > 3) {
+                    const altTensions = [1, 3, 6, 8]; 
+                    const extra = intervals.filter(function(i) { return i !== 0 && i !== 4 && i !== 10; });
+                    if (extra.every(function(i) { return altTensions.indexOf(i) !== -1; })) {
+                         const explicitRoot = notes.find(n => (n.note % 12) === rootPC && n.explicitEnharmonic);
+                         const rootPref = explicitRoot ? explicitRoot.explicitEnharmonic : 'sharps';
+                         const rootRaw = rootPref === 'flats' ? MIDI_TO_NOTE_FLAT[rootPC] : MIDI_TO_NOTE_SHARP[rootPC];
+                         const rootName = translateNote(rootRaw, notationMode);
+                         
+                         let bassName = "";
+                         const bassPC = bassMidi % 12;
+                         if (bassPC !== rootPC) {
+                             const explicitBass = notes.find(n => (n.note % 12) === bassPC && n.explicitEnharmonic);
+                             const bassPref = explicitBass ? explicitBass.explicitEnharmonic : rootPref;
+                             const bassRaw = bassPref === 'flats' ? MIDI_TO_NOTE_FLAT[bassPC] : MIDI_TO_NOTE_SHARP[bassPC];
+                             bassName = "/" + translateNote(bassRaw, notationMode);
+                         }
+                         
+                         matches.push({
+                             name: rootName + '7alt' + bassName,
+                             quality: '7alt',
+                             root: rootName,
+                             bass: bassName.replace('/', ''),
+                             intervals: intervals,
+                             score: 12 + (bassPC === rootPC ? 5 : 0)
+                         });
+                    }
                 }
             });
 
-            const results = [];
-            for (let key in uniqueMap) { results.push(uniqueMap[key]); }
-            return results.sort(function(a, b) { return b.score - a.score; });
+            matches.sort(function(a, b) { return b.score - a.score; });
+            const uniqueMatches = [];
+            const seenNames = new Set();
+            matches.forEach(function(m) {
+                if (!seenNames.has(m.name)) {
+                    seenNames.add(m.name);
+                    uniqueMatches.push(m);
+                }
+            });
+
+            return uniqueMatches;
         };
 
         const getVoiceLeadingDistance = function(source, target) {
@@ -692,7 +734,6 @@
             return d;
         };
 
-        // --- COMPONENTE FRETBOARD ESTÁNDAR ---
         const Fretboard = function(props) {
             const { fingering, prevFingering, degreeLabel, name, rootMidi, formattedChordName, quality, dropLabel, options, vlRank, isSelected, isLocked, onSelect, onPlay, hideInteractive, distance } = props;
             const [isRevealed, setIsRevealed] = useState(false);
@@ -791,7 +832,7 @@
                             {stringsArray.map(function(sIdx) { return <div key={sIdx} className="w-px bg-gradient-to-r from-slate-400 to-slate-500 opacity-60 h-full relative print:bg-black/30 z-0" />; })}
                             {fretsArray.map(function(i) { return <div key={i} className="absolute w-full bg-slate-600 shadow-[0_1px_1px_rgba(0,0,0,0.2)] print:bg-black/50 print:shadow-none z-0" style={{ height: '2px', top: i === numFrets ? 'calc(100% - 2px)' : (i / numFrets * 100) + '%' }} />; })}
                             
-                            {/* CAPA DE ESCALAS (Puntos violetas/fucsia con nombres de grado o nota) */}
+                            {/* CAPA DE ESCALAS */}
                             {!isBlind && options.showScales && fretsArray.map(function(fretIdx) {
                                 const actualFret = startFret + fretIdx;
                                 if (actualFret > startFret + numFrets - 1) return null;
@@ -880,7 +921,6 @@
                             })}
                         </div>
                         
-                        {/* OVERLAY MODO A CIEGAS */}
                         {isBlind && (
                             <div className="absolute inset-0 z-30 flex items-center justify-center cursor-pointer hide-on-pdf" onClick={function(e){ e.stopPropagation(); setIsRevealed(true); }}>
                                  <span className="bg-slate-800 border border-slate-700 text-white px-4 py-2 rounded-full text-xs font-bold shadow-2xl flex items-center gap-2 hover:bg-slate-700 transition-colors animate-pulse"><Icon name="Eye" size={14}/> Revelar</span>
@@ -891,24 +931,16 @@
             );
         };
 
-        // --- COMPONENTE DIAPASÓN INTERACTIVO (RECONOCEDOR INVERSO) ---
-        const InteractiveFretboard = function({ selectedNotes, onToggleNote, leftHanded, notationMode, enharmonicMod }) {
+        const InteractiveFretboard = function({ selectedNotes, onToggleNote, leftHanded, notationMode }) {
             const numFrets = 15;
             const stringsArray = leftHanded ? [0, 1, 2, 3, 4, 5] : [5, 4, 3, 2, 1, 0];
             const fretsArray = [];
             for(let i=0; i<=numFrets; i++) fretsArray.push(i);
             
-            const noteNamesAngloFlat = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B'];
             const noteNamesAngloSharp = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
-            const noteNamesLatinFlat = ['Do', 'Reb', 'Re', 'Mib', 'Mi', 'Fa', 'Solb', 'Sol', 'Lab', 'La', 'Sib', 'Si'];
+            const noteNamesAngloFlat = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B'];
             const noteNamesLatinSharp = ['Do', 'Do#', 'Re', 'Re#', 'Mi', 'Fa', 'Fa#', 'Sol', 'Sol#', 'La', 'La#', 'Si'];
-
-            let noteNames = [];
-            if (notationMode === 'latin') {
-                noteNames = enharmonicMod === 'sharp' ? noteNamesLatinSharp : noteNamesLatinFlat;
-            } else {
-                noteNames = enharmonicMod === 'sharp' ? noteNamesAngloSharp : noteNamesAngloFlat;
-            }
+            const noteNamesLatinFlat = ['Do', 'Reb', 'Re', 'Mib', 'Mi', 'Fa', 'Solb', 'Sol', 'Lab', 'La', 'Sib', 'Si'];
 
             return (
                 <div className="relative flex justify-between w-full max-w-[200px] border-4 border-[#1a1511] bg-[#2a241e] shadow-[inset_0_0_12px_rgba(0,0,0,0.9)] rounded-md transition-all mx-auto" style={{ height: '480px' }}>
@@ -932,17 +964,26 @@
                     {/* Cuadrícula de Interacción */}
                     {fretsArray.map(function(fret) {
                         return stringsArray.map(function(sNum) {
-                            const isSelected = selectedNotes.some(function(n) { return n.string === sNum && n.fret === fret; });
+                            const isSelectedNote = selectedNotes.find(function(n) { return n.string === sNum && n.fret === fret; });
                             const noteMidi = STRING_TUNINGS[sNum] + fret;
-                            const noteName = noteNames[noteMidi % 12];
+                            
+                            let noteName = '';
+                            if (isSelectedNote) {
+                                let prefToUse = isSelectedNote.explicitEnharmonic || 'sharps';
+                                let namesArray = notationMode === 'latin'
+                                    ? (prefToUse === 'flats' ? noteNamesLatinFlat : noteNamesLatinSharp)
+                                    : (prefToUse === 'flats' ? noteNamesAngloFlat : noteNamesAngloSharp);
+                                noteName = namesArray[noteMidi % 12];
+                            }
+                            
                             const topPos = fret === 0 ? 0 : (fret - 0.5) / numFrets * 100;
 
                             return (
                                 <div key={`grid-${fret}-${sNum}`} 
-                                     onClick={function() { onToggleNote(sNum, fret, noteMidi); }}
+                                     onClick={function() { onToggleNote(sNum, fret, noteMidi, isSelectedNote); }}
                                      className="absolute w-8 h-8 -ml-4 -mt-4 cursor-pointer flex items-center justify-center z-20 rounded-full hover:bg-white/10 transition-colors"
                                      style={{ left: `${(stringsArray.indexOf(sNum) / 5) * 100}%`, top: `${topPos}%` }}>
-                                    {isSelected && (
+                                    {isSelectedNote && (
                                         <div className="w-5 h-5 rounded-full bg-amber-500 text-slate-900 border border-amber-300 shadow-[0_0_10px_rgba(245,158,11,0.8)] flex items-center justify-center text-[7px] font-black">
                                             {noteName}
                                         </div>
@@ -955,13 +996,17 @@
             );
         };
 
-        // --- APP PRINCIPAL ---
         const App = function() {
-            const [masterScreen, setMasterScreen] = useState('hub'); // NUEVO ESTADO: 'hub', 'acordes', 'mastil'
             const [appTrack, setAppTrack] = useState(null); 
             const [activeTab, setActiveTab] = useState('study'); 
             const [showHelp, setShowHelp] = useState(false);
             
+            const [modalConfig, setModalConfig] = useState({ isOpen: false, type: 'alert', message: '', onConfirm: null, defaultValue: '' });
+            const showAlert = function(msg) { setModalConfig({ isOpen: true, type: 'alert', message: msg, onConfirm: null }); };
+            const showConfirm = function(msg, onConfirm) { setModalConfig({ isOpen: true, type: 'confirm', message: msg, onConfirm: onConfirm }); };
+            const showPrompt = function(msg, onConfirm) { setModalConfig({ isOpen: true, type: 'prompt', message: msg, onConfirm: onConfirm }); };
+            const closeModal = function() { setModalConfig(Object.assign({}, modalConfig, { isOpen: false })); };
+
             const [completedQuads, setCompletedQuads] = useLocalStorage('dm_comp_quads_v24', []);
             const [completedTriads, setCompletedTriads] = useLocalStorage('dm_comp_triads_v24', []);
             const [completedShells, setCompletedShells] = useLocalStorage('dm_comp_shells_v24', []);
@@ -972,7 +1017,6 @@
 
             const [labelMode, setLabelMode] = useState('intervals');
             const [notationMode, setNotationMode] = useState('anglo'); 
-            const [enharmonicMod, setEnharmonicMod] = useState('flat'); // NUEVO ESTADO: 'flat', 'sharp'
             const [leftHanded, setLeftHanded] = useState(false);
             const [audioMode, setAudioMode] = useState('strum'); 
             const [isMuted, setIsMuted] = useState(false);
@@ -983,7 +1027,6 @@
             const [showRootOverlay, setShowRootOverlay] = useState(false);
             const [tensionNotation, setTensionNotation] = useState(false);
 
-            // ESTADO MODO GUIADO 
             const [currentModuleIdx, setCurrentModuleIdx] = useState(0);
             const [sessionActive, setSessionActive] = useState(false);
             const [studyPhaseIdx, setStudyPhaseIdx] = useState(0); 
@@ -999,7 +1042,6 @@
             const [mixDrop2, setMixDrop2] = useState('drop3');
             const [mixBass2, setMixBass2] = useState(6);
 
-            // ESTADO MODO LIBRE 
             const [freeModeTab, setFreeModeTab] = useState('single'); 
             const [freeRoot, setFreeRoot] = useState('C'); 
             const [freeQuality, setFreeQuality] = useState('maj');
@@ -1010,7 +1052,7 @@
 
             // ESTADO: RECONOCEDOR INVERSO
             const [reverseNotes, setReverseNotes] = useState([]);
-            const detectedChords = useMemo(function() { return analyzeChord(reverseNotes, notationMode, enharmonicMod); }, [reverseNotes, notationMode, enharmonicMod]);
+            const detectedChords = useMemo(function() { return analyzeChord(reverseNotes, notationMode); }, [reverseNotes, notationMode]);
 
             // ESTADO METRÓNOMO
             const [isPlaying, setIsPlaying] = useState(false);
@@ -1027,13 +1069,11 @@
             const trackNames = { 'triads': 'Tríadas', 'quads': 'Cuatríadas/Tétradas', 'shells': 'Shell Voicing', 'tensions': 'Tensiones' };
             const displayTrackName = appTrack ? trackNames[appTrack] : '';
 
-            // FORMATEADORES GLOBALES
             const formatNoteKey = (k) => {
                  const base = k.replace('m', '');
                  return (LATIN_MAP[base] || base) + (k.includes('m') ? 'm' : '');
             };
 
-            // HOISTED FUNCTIONS
             function playVoicing(fingering) {
                 if (isMuted || !fingering) return;
                 if (!audioCtxRef.current) audioCtxRef.current = new (window.AudioContext || window.webkitAudioContext)();
@@ -1096,7 +1136,7 @@
                 }
                 
                 if (!targetEl) {
-                    alert("No hay diagramas generados para exportar en este momento.");
+                    showAlert("No hay diagramas generados para exportar en este momento.");
                     return;
                 }
 
@@ -1132,13 +1172,27 @@
                 });
             }
 
-            function toggleReverseNote(sNum, fret, noteMidi) {
+            function toggleReverseNote(sNum, fret, noteMidi, existingNote) {
                 setReverseNotes(function(prev) {
-                    if (prev.some(function(n) { return n.string === sNum && n.fret === fret; })) {
-                        return prev.filter(function(n) { return !(n.string === sNum && n.fret === fret); });
+                    if (existingNote) {
+                        const isAccidental = [1, 3, 6, 8, 10].indexOf(noteMidi % 12) !== -1;
+                        if (isAccidental) {
+                            if (existingNote.explicitEnharmonic === 'sharps') {
+                                return prev.map(function(n) {
+                                    if (n.string === sNum && n.fret === fret) {
+                                        return Object.assign({}, n, { explicitEnharmonic: 'flats' });
+                                    }
+                                    return n;
+                                });
+                            } else {
+                                return prev.filter(function(n) { return !(n.string === sNum && n.fret === fret); });
+                            }
+                        } else {
+                            return prev.filter(function(n) { return !(n.string === sNum && n.fret === fret); });
+                        }
                     }
-                    const filtered = prev.filter(function(n) { return n.string !== sNum; });
-                    return [...filtered, { string: sNum, fret: fret, note: noteMidi }];
+                    const isAccidental = [1, 3, 6, 8, 10].indexOf(noteMidi % 12) !== -1;
+                    return [...prev, { string: sNum, fret: fret, note: noteMidi, explicitEnharmonic: isAccidental ? 'sharps' : null }];
                 });
                 playSingleNote({ note: noteMidi });
             }
@@ -1173,35 +1227,33 @@
             const setCompletedList = appTrack === 'triads' ? setCompletedTriads : appTrack === 'shells' ? setCompletedShells : appTrack === 'tensions' ? setCompletedTensions : setCompletedQuads;
 
             useEffect(function() {
-                if (studyProgressionStep >= 0 && !isPlaying && activeTab === 'study' && masterScreen === 'acordes') {
+                if (studyProgressionStep >= 0 && !isPlaying && activeTab === 'study') {
                     const stepEl = document.getElementById("chord-step-" + studyProgressionStep);
                     if (stepEl) stepEl.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
                     
                     const fbEl = document.getElementById("fretboard-wrap-" + studyProgressionStep);
                     if (fbEl) fbEl.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
                 }
-            }, [studyProgressionStep, isPlaying, activeTab, masterScreen]);
+            }, [studyProgressionStep, isPlaying, activeTab]);
 
             useEffect(function() {
-                if (isPlaying && masterScreen === 'acordes') {
+                if (isPlaying) {
                     const stepEl = document.getElementById("chord-step-" + activeChordIdx);
                     if (stepEl) stepEl.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
                     
                     const fbEl = document.getElementById("fretboard-wrap-" + activeChordIdx);
                     if (fbEl) fbEl.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
                 }
-            }, [activeChordIdx, isPlaying, masterScreen]);
+            }, [activeChordIdx, isPlaying]);
 
             useEffect(function() {
-                if (masterScreen === 'acordes') {
-                    const activeModuleBtn = document.getElementById("module-btn-" + currentModuleIdx);
-                    if (activeModuleBtn) {
-                        setTimeout(function() {
-                            activeModuleBtn.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
-                        }, 50);
-                    }
+                const activeModuleBtn = document.getElementById("module-btn-" + currentModuleIdx);
+                if (activeModuleBtn) {
+                    setTimeout(function() {
+                        activeModuleBtn.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+                    }, 50);
                 }
-            }, [currentModuleIdx, masterScreen]);
+            }, [currentModuleIdx]);
 
             useEffect(function() {
                 setSelectedPath([]);
@@ -1445,10 +1497,10 @@
                             if (completedList.indexOf(currentModule.id) === -1) setCompletedList(completedList.concat(currentModule.id));
                             
                             if (currentModuleIdx < activePlan.length - 1) {
-                                alert("¡NIVEL SUPERADO! Has interiorizado la arquitectura del mástil en Mayor, Menor y Círculo de Cuartas. Desbloqueando siguiente nivel...");
+                                showAlert("¡NIVEL SUPERADO! Has interiorizado la arquitectura del mástil en Mayor, Menor y Círculo de Cuartas. Desbloqueando siguiente nivel...");
                                 setCurrentModuleIdx(currentModuleIdx + 1);
                             } else {
-                                alert("¡MAESTRÍA ALCANZADA! Has completado todo el programa.");
+                                showAlert("¡MAESTRÍA ALCANZADA! Has completado todo el programa.");
                             }
                         }
                     }
@@ -1478,7 +1530,6 @@
                     interval = setInterval(function() {
                         const s = metroState.current;
 
-                        // 1. Verificar si toca avanzar AL INICIO del beat
                         let currentDurationMultiplier = 1;
                         if (activeTab === 'study' && studyChords[s.chordIdx] && studyChords[s.chordIdx].duration) {
                             currentDurationMultiplier = studyChords[s.chordIdx].duration;
@@ -1499,7 +1550,6 @@
                             }
                         }
 
-                        // 2. Reproducir sonido y metrónomo EN EL TIEMPO EXACTO
                         const isAccent = s.beatInMeasure === 0;
                         playClick(isAccent);
 
@@ -1509,12 +1559,10 @@
                             }
                         }
 
-                        // 3. Actualizar UI al mismo tiempo
                         setActiveChordIdx(s.chordIdx);
                         if (activeTab === 'study') setStudyProgressionStep(s.chordIdx);
                         setCurrentRep(s.rep);
 
-                        // 4. Incrementar para el siguiente tick
                         s.beatInMeasure = (s.beatInMeasure + 1) % beatsPerMeasure;
                         s.beatInChord++;
                         
@@ -1566,7 +1614,7 @@
             function handleAddBuilderNext() {
                 const opts = generateChordData(freeRoot, freeQuality, freeDrop, freeBassString, activeQuals, null, appTrack, notationMode);
                 if (opts.length === 0) {
-                    alert("No hay digitaciones posibles sin cuerdas al aire para esa configuración.");
+                    showAlert("No hay digitaciones posibles sin cuerdas al aire para esa configuración.");
                     return;
                 }
                 const lastFingering = builderSeq[builderSeq.length - 1].fingering;
@@ -1605,7 +1653,7 @@
 
             function handleUpdateBuilderChord() {
                 const opts = generateChordData(freeRoot, freeQuality, freeDrop, freeBassString, activeQuals, null, appTrack, notationMode);
-                if (opts.length === 0) { alert("No hay digitaciones posibles sin cuerdas al aire para esa configuración."); return; }
+                if (opts.length === 0) { showAlert("No hay digitaciones posibles sin cuerdas al aire para esa configuración."); return; }
                 
                 let newSeq = [...builderSeq];
                 let prevFingering = editingIndex > 0 ? newSeq[editingIndex - 1].fingering : null;
@@ -1631,20 +1679,21 @@
             }
 
             function saveCurrentProgression() {
-                const name = prompt("Dale un nombre a tu progresión favorita:");
-                if (name && name.trim() !== '') {
-                    const newProg = { id: Date.now(), name: name.trim(), seq: builderSeq, track: appTrack };
-                    setSavedProgressions([...savedProgressions, newProg]);
-                }
+                showPrompt("Dale un nombre a tu progresión favorita:", function(name) {
+                    if (name && name.trim() !== '') {
+                        const newProg = { id: Date.now(), name: name.trim(), seq: builderSeq, track: appTrack };
+                        setSavedProgressions([...savedProgressions, newProg]);
+                    }
+                });
             }
             function loadProgression(prog) {
                 setBuilderSeq(prog.seq);
                 setEditingIndex(null);
             }
             function deleteProgression(id) {
-                if (confirm("¿Seguro que deseas eliminar esta progresión guardada?")) {
+                showConfirm("¿Seguro que deseas eliminar esta progresión guardada?", function() {
                     setSavedProgressions(savedProgressions.filter(function(p) { return p.id !== id; }));
-                }
+                });
             }
 
             const getCompletedCount = function(track) {
@@ -1660,86 +1709,13 @@
                 return STUDY_PLAN_QUADS.length;
             };
 
-            // RENDER: PANTALLAS PRINCIPALES
-
-            if (masterScreen === 'hub') {
-                return (
-                    <div className="min-h-screen bg-[#020617] flex flex-col items-center justify-center p-6 relative overflow-hidden">
-                        <div className="absolute top-[-20%] left-[-10%] w-[50vw] h-[50vw] max-w-[600px] max-h-[600px] bg-amber-600/10 rounded-full blur-[100px] pointer-events-none"></div>
-                        <div className="absolute bottom-[-20%] right-[-10%] w-[50vw] h-[50vw] max-w-[600px] max-h-[600px] bg-sky-600/10 rounded-full blur-[100px] pointer-events-none"></div>
-
-                        <div className="z-10 text-center mb-10 mt-8 animate-in fade-in slide-in-from-bottom-8 duration-700">
-                            <div className="inline-flex items-center justify-center p-4 bg-slate-900/80 rounded-3xl border border-slate-800 shadow-2xl mb-6">
-                                <Icon name="GraduationCap" size={64} className="text-amber-500 drop-shadow-[0_0_15px_rgba(245,158,11,0.5)]" />
-                            </div>
-                            <h1 className="text-5xl md:text-7xl font-black text-slate-100 tracking-tighter mb-4 drop-shadow-lg">
-                                Conservatorio <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-orange-500">Master</span>
-                            </h1>
-                            <p className="text-slate-400 text-lg md:text-xl max-w-2xl mx-auto font-medium">La suite definitiva para el dominio de la armonía y el diapasón.</p>
-                        </div>
-
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-10 w-full max-w-5xl z-10 animate-in fade-in zoom-in-95 duration-700 delay-150">
-                            <button onClick={() => setMasterScreen('acordes')} className="group relative p-[2px] rounded-[2rem] bg-gradient-to-br from-slate-800 to-slate-900 hover:from-amber-400 hover:to-orange-600 transition-all duration-500 text-left shadow-2xl hover:shadow-[0_10px_40px_rgba(245,158,11,0.2)] hover:-translate-y-2 overflow-hidden">
-                                <div className="absolute inset-0 bg-slate-900 opacity-0 group-hover:opacity-10 transition-opacity"></div>
-                                <div className="bg-[#0b1120] p-8 md:p-12 rounded-[1.9rem] h-full flex flex-col relative z-10">
-                                    <div className="bg-slate-800 w-16 h-16 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-500 shadow-inner border border-slate-700 group-hover:border-amber-500/50 group-hover:bg-amber-500/10">
-                                        <Icon name="Layers" size={32} className="text-slate-300 group-hover:text-amber-400 transition-colors" />
-                                    </div>
-                                    <h2 className="text-2xl md:text-3xl font-black text-slate-100 mb-3 tracking-tight">Laboratorio de Acordes</h2>
-                                    <p className="text-slate-400 text-sm leading-relaxed mb-6">Generador avanzado de voicings, drops, shells y tensiones. Estudia progresiones reales y analiza el voice leading matemático.</p>
-                                    <div className="mt-auto flex items-center text-amber-500 font-bold text-sm tracking-widest uppercase gap-2 group-hover:gap-3 transition-all">
-                                        Iniciar Módulo <Icon name="ArrowRight" size={16} />
-                                    </div>
-                                </div>
-                            </button>
-
-                            <button onClick={() => setMasterScreen('mastil')} className="group relative p-[2px] rounded-[2rem] bg-gradient-to-br from-slate-800 to-slate-900 hover:from-sky-400 hover:to-indigo-600 transition-all duration-500 text-left shadow-2xl hover:shadow-[0_10px_40px_rgba(56,189,248,0.2)] hover:-translate-y-2 overflow-hidden">
-                                <div className="absolute inset-0 bg-slate-900 opacity-0 group-hover:opacity-10 transition-opacity"></div>
-                                <div className="bg-[#0b1120] p-8 md:p-12 rounded-[1.9rem] h-full flex flex-col relative z-10">
-                                    <div className="bg-slate-800 w-16 h-16 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-500 shadow-inner border border-slate-700 group-hover:border-sky-500/50 group-hover:bg-sky-500/10">
-                                        <Icon name="Music" size={32} className="text-slate-300 group-hover:text-sky-400 transition-colors" />
-                                    </div>
-                                    <h2 className="text-2xl md:text-3xl font-black text-slate-100 mb-3 tracking-tight">Mástil Interactivo</h2>
-                                    <p className="text-slate-400 text-sm leading-relaxed mb-6">Herramienta externa para visualizar escalas, arpegios y mapeo del diapasón. Explora la geometría de la guitarra al instante.</p>
-                                    <div className="mt-auto flex items-center text-sky-400 font-bold text-sm tracking-widest uppercase gap-2 group-hover:gap-3 transition-all">
-                                        Explorar Herramienta <Icon name="ArrowRight" size={16} />
-                                    </div>
-                                </div>
-                            </button>
-                        </div>
-                        
-                        <div className="absolute bottom-6 text-slate-600 text-[10px] font-bold tracking-widest uppercase">
-                            Desarrollado por Juan Miguel Rios Redondo
-                        </div>
-                    </div>
-                );
-            }
-
-            if (masterScreen === 'mastil') {
-                return (
-                    <div className="h-screen w-full bg-[#020617] flex flex-col absolute inset-0 z-50">
-                        <div className="flex items-center justify-between p-4 bg-slate-900 border-b border-slate-800 shrink-0 shadow-md">
-                            <div className="flex items-center gap-3 text-sky-400 font-black text-lg">
-                                <Icon name="Music" size={24} /> Mástil Interactivo
-                            </div>
-                            <button onClick={() => setMasterScreen('hub')} className="bg-slate-800 hover:bg-rose-500/20 text-slate-300 hover:text-rose-400 px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 transition-all border border-slate-700 hover:border-rose-500/50">
-                                <Icon name="X" size={16} /> Cerrar Visualizador
-                            </button>
-                        </div>
-                        <div className="flex-1 w-full bg-black relative">
-                            <iframe src="https://juanmiguel0927.github.io/Mastil/" className="absolute inset-0 w-full h-full border-none" title="Mástil Interactivo" allowFullScreen></iframe>
-                        </div>
-                    </div>
-                );
-            }
+            const currentlyActiveStepIdx = isPlaying ? activeChordIdx : studyProgressionStep;
 
             if (!appTrack) {
                 return (
-                    <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-4 relative">
-                        <button onClick={() => setMasterScreen('hub')} className="absolute top-6 left-6 text-slate-400 hover:text-amber-500 flex items-center gap-2 font-bold transition-colors bg-slate-900 px-4 py-2 rounded-xl border border-slate-800 z-50 shadow-lg">
-                            <Icon name="ArrowLeft" size={16}/> Volver al Menú Principal
-                        </button>
-                        <div className="glass-panel p-6 md:p-10 rounded-[2rem] text-center w-full max-w-5xl shadow-2xl animate-in zoom-in-95 border border-slate-800 mt-12">
+                    <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-4">
+                        <CustomModal config={modalConfig} onClose={closeModal} />
+                        <div className="glass-panel p-6 md:p-10 rounded-[2rem] text-center w-full max-w-5xl shadow-2xl animate-in zoom-in-95 border border-slate-800">
                             <div className="flex justify-center mb-6 text-amber-500"><Icon name="GraduationCap" size={64} /></div>
                             <h1 className="text-3xl md:text-5xl font-black mb-6 text-slate-100 tracking-tight">LABORATORIO DE ACORDES</h1>
                             <p className="text-slate-400 mb-10 text-sm md:text-base leading-relaxed max-w-2xl mx-auto">
@@ -1776,9 +1752,10 @@
 
             return (
                 <div>
+                    <CustomModal config={modalConfig} onClose={closeModal} />
                     {showHelp && (
                         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm print:hidden">
-                            <div className="bg-slate-900 border border-slate-700 rounded-3xl p-6 md:p-10 max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl relative">
+                            <div className="bg-slate-900 border border-slate-700 rounded-3xl p-6 md:p-10 max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl relative animate-in zoom-in-95">
                                 <button onClick={function(){setShowHelp(false);}} className="absolute top-6 right-6 text-slate-400 hover:text-white transition-colors">
                                     <Icon name="X" size={24}/>
                                 </button>
@@ -2276,7 +2253,6 @@
                             </div>
                         )}
                         
-                        {/* NUEVA PESTAÑA: RECONOCEDOR INVERSO */}
                         {activeTab === 'reverse' && (
                             <div className="py-8 animate-in fade-in zoom-in-95 duration-500">
                                 <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 md:p-10 shadow-2xl relative max-w-4xl mx-auto">
@@ -2285,13 +2261,10 @@
                                             <h2 className="text-2xl font-black text-amber-500 flex items-center gap-3"><Icon name="Search" size={28}/> Reconocedor de Acordes Inverso</h2>
                                             <p className="text-slate-400 text-sm mt-2">Haz clic en el diapasón interactivo para ubicar las notas. El motor analizará tu postura y te mostrará el acorde exacto.</p>
                                         </div>
-                                        <div className="flex gap-2 shrink-0">
-                                            <button onClick={function(){setEnharmonicMod(enharmonicMod === 'flat' ? 'sharp' : 'flat');}} className="text-slate-400 hover:text-sky-400 flex items-center gap-2 text-sm font-bold transition-colors bg-slate-800 px-4 py-2 rounded-xl border border-slate-700">
-                                                <Icon name="Shuffle" size={16}/> {enharmonicMod === 'flat' ? 'b Bemoles' : '# Sostenidos'}
-                                            </button>
+                                        <div className="flex gap-2 w-full md:w-auto overflow-x-auto shrink-0 pb-2 md:pb-0">
                                             {reverseNotes.length > 0 && (
-                                                <button onClick={function(){setReverseNotes([]);}} className="text-slate-400 hover:text-rose-500 flex items-center gap-2 text-sm font-bold transition-colors bg-slate-800 px-4 py-2 rounded-xl border border-slate-700">
-                                                    <Icon name="Trash2" size={16}/> Limpiar Notas
+                                                <button onClick={function(){setReverseNotes([]);}} className="text-slate-400 hover:text-rose-500 flex items-center gap-2 text-xs font-bold transition-colors bg-slate-800 px-4 py-2 rounded-xl border border-slate-700 shrink-0">
+                                                    <Icon name="Trash2" size={14}/> Limpiar Diapasón
                                                 </button>
                                             )}
                                         </div>
@@ -2299,16 +2272,55 @@
                                     
                                     <div className="flex flex-col lg:flex-row gap-10">
                                         <div className="flex-1 w-full max-w-[280px] mx-auto">
-                                            <InteractiveFretboard selectedNotes={reverseNotes} onToggleNote={toggleReverseNote} leftHanded={leftHanded} notationMode={notationMode} enharmonicMod={enharmonicMod} />
+                                            <InteractiveFretboard selectedNotes={reverseNotes} onToggleNote={toggleReverseNote} leftHanded={leftHanded} notationMode={notationMode} />
                                         </div>
                                         
                                         <div className="flex-1 flex flex-col justify-start bg-[#0f172a] p-6 md:p-8 rounded-2xl border border-slate-800">
                                             <h3 className="text-xs font-black uppercase tracking-widest text-slate-500 mb-6 border-b border-slate-800 pb-3">Resultados del Análisis ({reverseNotes.length} notas)</h3>
                                             
-                                            {reverseNotes.length < 2 ? (
+                                            {reverseNotes.length === 0 ? (
                                                 <div className="flex flex-col items-center justify-center h-full text-slate-600 opacity-60 mt-10">
                                                     <Icon name="Music" size={48} className="mb-4" />
-                                                    <p className="text-center font-bold">Selecciona al menos 2 notas en el diapasón para analizar.</p>
+                                                    <p className="text-center font-bold">Selecciona notas en el diapasón para analizar.</p>
+                                                    <p className="text-center text-xs mt-2">Haz doble clic en una tecla negra para alternar entre sostenido o bemol.</p>
+                                                </div>
+                                            ) : reverseNotes.length === 1 ? (
+                                                <div className="flex flex-col items-center justify-center h-full text-amber-500 mt-10 animate-in fade-in zoom-in duration-300">
+                                                    <Icon name="Target" size={48} className="mb-4 drop-shadow-[0_0_15px_rgba(245,158,11,0.5)]" />
+                                                    <h4 className="text-2xl font-black mb-2 uppercase tracking-widest">Nota Única</h4>
+                                                    <p className="text-4xl font-black text-slate-100">
+                                                        {(() => {
+                                                            const n = reverseNotes[0];
+                                                            const pref = n.explicitEnharmonic || 'sharps';
+                                                            const namesArray = notationMode === 'latin'
+                                                                ? (pref === 'flats' ? MIDI_TO_NOTE_FLAT : MIDI_TO_NOTE_SHARP).map(k => translateNote(k, 'latin'))
+                                                                : (pref === 'flats' ? MIDI_TO_NOTE_FLAT : MIDI_TO_NOTE_SHARP);
+                                                            return namesArray[n.note % 12];
+                                                        })()}
+                                                    </p>
+                                                    <p className="text-slate-500 text-sm mt-4 font-bold">Añade otra nota para calcular el intervalo.</p>
+                                                </div>
+                                            ) : reverseNotes.length === 2 ? (
+                                                <div className="flex flex-col items-center justify-center h-full text-sky-500 mt-10 animate-in fade-in zoom-in duration-300">
+                                                    <Icon name="Layers" size={48} className="mb-4 drop-shadow-[0_0_15px_rgba(14,165,233,0.5)]" />
+                                                    <h4 className="text-2xl font-black mb-2 uppercase tracking-widest">Intervalo Analizado</h4>
+                                                    <p className="text-3xl font-black text-slate-100 text-center">
+                                                        {(() => {
+                                                            const sorted = [...reverseNotes].sort((a,b) => a.note - b.note);
+                                                            const diff = sorted[1].note - sorted[0].note;
+                                                            const intervals = {
+                                                                0: 'Unísono', 1: '2da menor (b2)', 2: '2da Mayor (2)', 3: '3ra menor (b3)',
+                                                                4: '3ra Mayor (3)', 5: '4ta Justa (4)', 6: 'Tritono (b5/#4)', 7: '5ta Justa (5)',
+                                                                8: '6ta menor (b6)', 9: '6ta Mayor (6)', 10: '7ma menor (b7)', 11: '7ma Mayor (Maj7)',
+                                                                12: 'Octava Perfecta (8va)', 13: '9na menor (b9)', 14: '9na Mayor (9)', 15: '9na Aumentada (#9)',
+                                                                16: '10ma Mayor', 17: '11na Justa (11)', 18: '11na Aumentada (#11)', 19: '5ta Justa (8va arriba)',
+                                                                20: '13ra menor (b13)', 21: '13ra Mayor (13)', 22: '7ma menor (8va arriba)', 23: '7ma Mayor (8va arriba)',
+                                                                24: 'Doble Octava'
+                                                            };
+                                                            return intervals[diff] || `Distancia de ${diff} semitonos`;
+                                                        })()}
+                                                    </p>
+                                                    <p className="text-slate-500 text-sm mt-4 font-bold">Añade una tercera nota para formar un acorde.</p>
                                                 </div>
                                             ) : detectedChords.length > 0 ? (
                                                 <div className="space-y-4">
@@ -2330,7 +2342,7 @@
                                             ) : (
                                                 <div className="flex flex-col items-center justify-center h-full text-slate-500 mt-10">
                                                     <Icon name="AlertCircle" size={48} className="mb-4 opacity-50" />
-                                                    <p className="text-center font-bold">No se encontró una coincidencia exacta en la base de datos de armonía estricta para esta combinación.</p>
+                                                    <p className="text-center font-bold">No se encontró una coincidencia de estructura armónica para esta combinación de intervalos.</p>
                                                 </div>
                                             )}
                                         </div>
@@ -2340,7 +2352,6 @@
                         )}
                     </div>
 
-                    {/* FOOTER GLOBAL - CONTROLES INFERIORES */}
                     <footer className="fixed bottom-2 md:bottom-4 left-1/2 -translate-x-1/2 w-[98%] md:w-[95%] max-w-4xl flex flex-col items-center gap-1.5 md:gap-2 z-50 print:hidden">
                         <div className="bg-black/95 backdrop-blur-xl border border-slate-800 p-1.5 md:p-2 rounded-2xl flex flex-nowrap overflow-x-auto gap-1.5 md:gap-2 shadow-[0_-10px_40px_rgba(0,0,0,0.5)] w-full justify-start md:justify-center no-scrollbar snap-x">
                             
@@ -2419,4 +2430,4 @@
         root.render(<App />);
     </script>
 </body>
-    </html>
+</html>
