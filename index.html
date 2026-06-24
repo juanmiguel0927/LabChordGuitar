@@ -581,6 +581,15 @@
         const analyzeChord = function(notes, notationMode = 'anglo') {
             if (notes.length < 2) return [];
             
+            let boardPref = 'sharps';
+            const lowestInputNote = [...notes].sort(function(a, b) { return a.note - b.note; })[0];
+            if (lowestInputNote && lowestInputNote.explicitEnharmonic) {
+                boardPref = lowestInputNote.explicitEnharmonic;
+            } else {
+                const firstPref = [...notes].sort(function(a, b) { return a.note - b.note; }).find(function(n) { return n.explicitEnharmonic; });
+                if (firstPref) boardPref = firstPref.explicitEnharmonic;
+            }
+
             const uniquePitches = [...new Set(notes.map(function(n) { return n.note; }))].sort(function(a, b) { return a - b; });
             const bassMidi = uniquePitches[0];
             const uniquePitchClasses = [...new Set(uniquePitches.map(function(n) { return n % 12; }))];
@@ -653,8 +662,7 @@
                     }
 
                     if (isMatch) {
-                        const explicitRoot = notes.find(n => (n.note % 12) === rootPC && n.explicitEnharmonic);
-                        const rootPref = explicitRoot ? explicitRoot.explicitEnharmonic : 'sharps';
+                        const rootPref = boardPref;
                         
                         const rootRaw = rootPref === 'flats' ? MIDI_TO_NOTE_FLAT[rootPC] : MIDI_TO_NOTE_SHARP[rootPC];
                         const rootName = translateNote(rootRaw, notationMode);
@@ -662,8 +670,7 @@
                         let bassName = "";
                         const bassPC = bassMidi % 12;
                         if (bassPC !== rootPC) {
-                            const explicitBass = notes.find(n => (n.note % 12) === bassPC && n.explicitEnharmonic);
-                            const bassPref = explicitBass ? explicitBass.explicitEnharmonic : rootPref;
+                            const bassPref = boardPref;
                             const bassRaw = bassPref === 'flats' ? MIDI_TO_NOTE_FLAT[bassPC] : MIDI_TO_NOTE_SHARP[bassPC];
                             bassName = "/" + translateNote(bassRaw, notationMode);
                         }
@@ -686,16 +693,14 @@
                     const altTensions = [1, 3, 6, 8]; 
                     const extra = intervals.filter(function(i) { return i !== 0 && i !== 4 && i !== 10; });
                     if (extra.every(function(i) { return altTensions.indexOf(i) !== -1; })) {
-                         const explicitRoot = notes.find(n => (n.note % 12) === rootPC && n.explicitEnharmonic);
-                         const rootPref = explicitRoot ? explicitRoot.explicitEnharmonic : 'sharps';
+                         const rootPref = boardPref;
                          const rootRaw = rootPref === 'flats' ? MIDI_TO_NOTE_FLAT[rootPC] : MIDI_TO_NOTE_SHARP[rootPC];
                          const rootName = translateNote(rootRaw, notationMode);
                          
                          let bassName = "";
                          const bassPC = bassMidi % 12;
                          if (bassPC !== rootPC) {
-                             const explicitBass = notes.find(n => (n.note % 12) === bassPC && n.explicitEnharmonic);
-                             const bassPref = explicitBass ? explicitBass.explicitEnharmonic : rootPref;
+                             const bassPref = boardPref;
                              const bassRaw = bassPref === 'flats' ? MIDI_TO_NOTE_FLAT[bassPC] : MIDI_TO_NOTE_SHARP[bassPC];
                              bassName = "/" + translateNote(bassRaw, notationMode);
                          }
@@ -942,6 +947,15 @@
             const noteNamesLatinSharp = ['Do', 'Do#', 'Re', 'Re#', 'Mi', 'Fa', 'Fa#', 'Sol', 'Sol#', 'La', 'La#', 'Si'];
             const noteNamesLatinFlat = ['Do', 'Reb', 'Re', 'Mib', 'Mi', 'Fa', 'Solb', 'Sol', 'Lab', 'La', 'Sib', 'Si'];
 
+            let boardPref = 'sharps';
+            const lowestNote = [...selectedNotes].sort(function(a, b) { return a.note - b.note; })[0];
+            if (lowestNote && lowestNote.explicitEnharmonic) {
+                boardPref = lowestNote.explicitEnharmonic;
+            } else {
+                const firstPref = [...selectedNotes].sort(function(a, b) { return a.note - b.note; }).find(function(n) { return n.explicitEnharmonic; });
+                if (firstPref) boardPref = firstPref.explicitEnharmonic;
+            }
+
             return (
                 <div className="relative flex justify-between w-full max-w-[200px] border-4 border-[#1a1511] bg-[#2a241e] shadow-[inset_0_0_12px_rgba(0,0,0,0.9)] rounded-md transition-all mx-auto" style={{ height: '480px' }}>
                     {/* Markers */}
@@ -969,7 +983,7 @@
                             
                             let noteName = '';
                             if (isSelectedNote) {
-                                let prefToUse = isSelectedNote.explicitEnharmonic || 'sharps';
+                                let prefToUse = boardPref;
                                 let namesArray = notationMode === 'latin'
                                     ? (prefToUse === 'flats' ? noteNamesLatinFlat : noteNamesLatinSharp)
                                     : (prefToUse === 'flats' ? noteNamesAngloFlat : noteNamesAngloSharp);
@@ -1174,9 +1188,11 @@
 
             function toggleReverseNote(sNum, fret, noteMidi, existingNote) {
                 setReverseNotes(function(prev) {
+                    const lowestNote = [...prev].sort(function(a,b) { return a.note - b.note; })[0];
+                    const isAccidental = [1, 3, 6, 8, 10].indexOf(noteMidi % 12) !== -1;
+                    
                     if (existingNote) {
-                        const isAccidental = [1, 3, 6, 8, 10].indexOf(noteMidi % 12) !== -1;
-                        if (isAccidental) {
+                        if (isAccidental && existingNote === lowestNote) {
                             if (existingNote.explicitEnharmonic === 'sharps') {
                                 return prev.map(function(n) {
                                     if (n.string === sNum && n.fret === fret) {
@@ -1191,7 +1207,6 @@
                             return prev.filter(function(n) { return !(n.string === sNum && n.fret === fret); });
                         }
                     }
-                    const isAccidental = [1, 3, 6, 8, 10].indexOf(noteMidi % 12) !== -1;
                     return [...prev, { string: sNum, fret: fret, note: noteMidi, explicitEnharmonic: isAccidental ? 'sharps' : null }];
                 });
                 playSingleNote({ note: noteMidi });
@@ -2282,7 +2297,7 @@
                                                 <div className="flex flex-col items-center justify-center h-full text-slate-600 opacity-60 mt-10">
                                                     <Icon name="Music" size={48} className="mb-4" />
                                                     <p className="text-center font-bold">Selecciona notas en el diapasón para analizar.</p>
-                                                    <p className="text-center text-xs mt-2">Haz doble clic en una tecla negra para alternar entre sostenido o bemol.</p>
+                                                    <p className="text-center text-xs mt-2">Haz doble clic en el bajo del acorde para alternar entre sostenidos o bemoles de toda la estructura.</p>
                                                 </div>
                                             ) : reverseNotes.length === 1 ? (
                                                 <div className="flex flex-col items-center justify-center h-full text-amber-500 mt-10 animate-in fade-in zoom-in duration-300">
