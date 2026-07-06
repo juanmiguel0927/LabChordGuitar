@@ -89,18 +89,12 @@
             if (!config.isOpen) return null;
             const [inputValue, setInputValue] = useState(config.defaultValue || '');
 
-            useEffect(function() {
-                setInputValue(config.defaultValue || '');
-            }, [config]);
+            useEffect(function() { setInputValue(config.defaultValue || ''); }, [config]);
 
             const handleConfirm = function() {
-                if (config.type === 'prompt') {
-                    if (config.onConfirm) config.onConfirm(inputValue);
-                } else if (config.type === 'confirm') {
-                    if (config.onConfirm) config.onConfirm(true);
-                } else {
-                    if (config.onConfirm) config.onConfirm();
-                }
+                if (config.type === 'prompt' && config.onConfirm) config.onConfirm(inputValue);
+                else if (config.type === 'confirm' && config.onConfirm) config.onConfirm(true);
+                else if (config.onConfirm) config.onConfirm();
                 onClose();
             };
 
@@ -117,17 +111,9 @@
                             {config.type === 'alert' ? 'Aviso' : config.type === 'confirm' ? 'Confirmación' : 'Entrada Requerida'}
                         </h3>
                         <p className="text-slate-300 mb-6">{config.message}</p>
-                        
                         {config.type === 'prompt' && (
-                            <input 
-                                type="text" 
-                                className="w-full bg-[#0f172a] border border-slate-700 p-3 rounded-xl text-white font-bold focus:ring-2 ring-amber-500 outline-none transition-all mb-6"
-                                value={inputValue}
-                                onChange={function(e) { setInputValue(e.target.value); }}
-                                autoFocus
-                            />
+                            <input type="text" className="w-full bg-[#0f172a] border border-slate-700 p-3 rounded-xl text-white font-bold focus:ring-2 ring-amber-500 outline-none transition-all mb-6" value={inputValue} onChange={(e) => setInputValue(e.target.value)} autoFocus />
                         )}
-
                         <div className="flex justify-end gap-3">
                             {(config.type === 'confirm' || config.type === 'prompt') && (
                                 <button onClick={handleCancel} className="px-5 py-2.5 rounded-xl font-bold bg-slate-800 text-slate-300 hover:bg-slate-700 transition-colors">Cancelar</button>
@@ -219,7 +205,7 @@
 
         const INVERSION_NAMES_QUADS = ['Fund.', '1ra Inv.', '2da Inv.', '3ra Inv.'];
         const INVERSION_NAMES_TRIADS = ['Fund.', '1ra Inv.', '2da Inv.'];
-        const STRING_TUNINGS = [64, 59, 55, 50, 45, 40]; // 1ra a 6ta
+        const STRING_TUNINGS = [64, 59, 55, 50, 45, 40];
 
         const getScaleData = function(qualityId, degreeLabel) {
             let type = '';
@@ -317,7 +303,7 @@
         const SHELL_VOICINGS = [ { id: 'fixed', label: 'Disposición Fija', short: 'Fija' } ];
         const TENSION_VOICINGS = [ { id: 'fixed', label: 'Disposición Fija', short: 'Fija' } ];
 
-        const STUDY_KEYS = ['C', 'F', 'Bb', 'Eb']; // Tonos centrales para evitar extremos
+        const STUDY_KEYS = ['C', 'F', 'Bb', 'Eb'];
         const STUDY_KEYS_MIN = ['Cm', 'Fm', 'Bbm', 'Ebm'];
 
         const STUDY_PLAN_TRIADS = [
@@ -579,17 +565,8 @@
         };
 
         const analyzeChord = function(notes, notationMode = 'anglo') {
-            if (notes.length < 2) return [];
+            if (notes.length < 3) return []; // Solo para 3+ notas
             
-            let boardPref = 'sharps';
-            const lowestInputNote = [...notes].sort(function(a, b) { return a.note - b.note; })[0];
-            if (lowestInputNote && lowestInputNote.explicitEnharmonic) {
-                boardPref = lowestInputNote.explicitEnharmonic;
-            } else {
-                const firstPref = [...notes].sort(function(a, b) { return a.note - b.note; }).find(function(n) { return n.explicitEnharmonic; });
-                if (firstPref) boardPref = firstPref.explicitEnharmonic;
-            }
-
             const uniquePitches = [...new Set(notes.map(function(n) { return n.note; }))].sort(function(a, b) { return a - b; });
             const bassMidi = uniquePitches[0];
             const uniquePitchClasses = [...new Set(uniquePitches.map(function(n) { return n % 12; }))];
@@ -662,7 +639,8 @@
                     }
 
                     if (isMatch) {
-                        const rootPref = boardPref;
+                        const explicitRoot = notes.find(n => (n.note % 12) === rootPC && n.explicitEnharmonic);
+                        const rootPref = explicitRoot ? explicitRoot.explicitEnharmonic : 'sharps';
                         
                         const rootRaw = rootPref === 'flats' ? MIDI_TO_NOTE_FLAT[rootPC] : MIDI_TO_NOTE_SHARP[rootPC];
                         const rootName = translateNote(rootRaw, notationMode);
@@ -670,7 +648,8 @@
                         let bassName = "";
                         const bassPC = bassMidi % 12;
                         if (bassPC !== rootPC) {
-                            const bassPref = boardPref;
+                            const explicitBass = notes.find(n => (n.note % 12) === bassPC && n.explicitEnharmonic);
+                            const bassPref = explicitBass ? explicitBass.explicitEnharmonic : rootPref;
                             const bassRaw = bassPref === 'flats' ? MIDI_TO_NOTE_FLAT[bassPC] : MIDI_TO_NOTE_SHARP[bassPC];
                             bassName = "/" + translateNote(bassRaw, notationMode);
                         }
@@ -693,14 +672,16 @@
                     const altTensions = [1, 3, 6, 8]; 
                     const extra = intervals.filter(function(i) { return i !== 0 && i !== 4 && i !== 10; });
                     if (extra.every(function(i) { return altTensions.indexOf(i) !== -1; })) {
-                         const rootPref = boardPref;
+                         const explicitRoot = notes.find(n => (n.note % 12) === rootPC && n.explicitEnharmonic);
+                         const rootPref = explicitRoot ? explicitRoot.explicitEnharmonic : 'sharps';
                          const rootRaw = rootPref === 'flats' ? MIDI_TO_NOTE_FLAT[rootPC] : MIDI_TO_NOTE_SHARP[rootPC];
                          const rootName = translateNote(rootRaw, notationMode);
                          
                          let bassName = "";
                          const bassPC = bassMidi % 12;
                          if (bassPC !== rootPC) {
-                             const bassPref = boardPref;
+                             const explicitBass = notes.find(n => (n.note % 12) === bassPC && n.explicitEnharmonic);
+                             const bassPref = explicitBass ? explicitBass.explicitEnharmonic : rootPref;
                              const bassRaw = bassPref === 'flats' ? MIDI_TO_NOTE_FLAT[bassPC] : MIDI_TO_NOTE_SHARP[bassPC];
                              bassName = "/" + translateNote(bassRaw, notationMode);
                          }
@@ -947,15 +928,6 @@
             const noteNamesLatinSharp = ['Do', 'Do#', 'Re', 'Re#', 'Mi', 'Fa', 'Fa#', 'Sol', 'Sol#', 'La', 'La#', 'Si'];
             const noteNamesLatinFlat = ['Do', 'Reb', 'Re', 'Mib', 'Mi', 'Fa', 'Solb', 'Sol', 'Lab', 'La', 'Sib', 'Si'];
 
-            let boardPref = 'sharps';
-            const lowestNote = [...selectedNotes].sort(function(a, b) { return a.note - b.note; })[0];
-            if (lowestNote && lowestNote.explicitEnharmonic) {
-                boardPref = lowestNote.explicitEnharmonic;
-            } else {
-                const firstPref = [...selectedNotes].sort(function(a, b) { return a.note - b.note; }).find(function(n) { return n.explicitEnharmonic; });
-                if (firstPref) boardPref = firstPref.explicitEnharmonic;
-            }
-
             return (
                 <div className="relative flex justify-between w-full max-w-[200px] border-4 border-[#1a1511] bg-[#2a241e] shadow-[inset_0_0_12px_rgba(0,0,0,0.9)] rounded-md transition-all mx-auto" style={{ height: '480px' }}>
                     {/* Markers */}
@@ -983,7 +955,7 @@
                             
                             let noteName = '';
                             if (isSelectedNote) {
-                                let prefToUse = boardPref;
+                                let prefToUse = isSelectedNote.explicitEnharmonic || 'sharps';
                                 let namesArray = notationMode === 'latin'
                                     ? (prefToUse === 'flats' ? noteNamesLatinFlat : noteNamesLatinSharp)
                                     : (prefToUse === 'flats' ? noteNamesAngloFlat : noteNamesAngloSharp);
@@ -1188,12 +1160,12 @@
 
             function toggleReverseNote(sNum, fret, noteMidi, existingNote) {
                 setReverseNotes(function(prev) {
-                    const lowestNote = [...prev].sort(function(a,b) { return a.note - b.note; })[0];
                     const isAccidental = [1, 3, 6, 8, 10].indexOf(noteMidi % 12) !== -1;
                     
                     if (existingNote) {
-                        if (isAccidental && existingNote === lowestNote) {
+                        if (isAccidental) {
                             if (existingNote.explicitEnharmonic === 'sharps') {
+                                // 2do Clic: Cambiar a bemol
                                 return prev.map(function(n) {
                                     if (n.string === sNum && n.fret === fret) {
                                         return Object.assign({}, n, { explicitEnharmonic: 'flats' });
@@ -1201,12 +1173,15 @@
                                     return n;
                                 });
                             } else {
+                                // 3er Clic: Eliminar
                                 return prev.filter(function(n) { return !(n.string === sNum && n.fret === fret); });
                             }
                         } else {
+                            // Nota Natural: Eliminar al 2do Clic
                             return prev.filter(function(n) { return !(n.string === sNum && n.fret === fret); });
                         }
                     }
+                    // 1er Clic: Añadir nota nueva (si es alterada se pone como '#' por defecto)
                     return [...prev, { string: sNum, fret: fret, note: noteMidi, explicitEnharmonic: isAccidental ? 'sharps' : null }];
                 });
                 playSingleNote({ note: noteMidi });
@@ -1819,6 +1794,7 @@
                             </div>
                         </header>
 
+                        {/* PESTAÑA: ESTUDIO GUIADO */}
                         {activeTab === 'study' && activePlan && (
                             <div className="grid grid-cols-1 xl:grid-cols-4 gap-8">
                                 <div className="xl:col-span-1 print:hidden flex flex-row xl:flex-col gap-3 overflow-x-auto pb-4 xl:pb-0 no-scrollbar snap-x items-stretch">
@@ -2071,6 +2047,7 @@
                             </div>
                         )}
 
+                        {/* PESTAÑA: LABORATORIO LIBRE Y CONSTRUCTOR */}
                         {activeTab === 'free' && (
                             <div className="py-8">
                                 <div className="flex justify-center mb-8 print:hidden">
@@ -2268,6 +2245,7 @@
                             </div>
                         )}
                         
+                        {/* PESTAÑA: RECONOCEDOR INVERSO (CON ENARMONÍA INDEPENDIENTE) */}
                         {activeTab === 'reverse' && (
                             <div className="py-8 animate-in fade-in zoom-in-95 duration-500">
                                 <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 md:p-10 shadow-2xl relative max-w-4xl mx-auto">
@@ -2297,7 +2275,7 @@
                                                 <div className="flex flex-col items-center justify-center h-full text-slate-600 opacity-60 mt-10">
                                                     <Icon name="Music" size={48} className="mb-4" />
                                                     <p className="text-center font-bold">Selecciona notas en el diapasón para analizar.</p>
-                                                    <p className="text-center text-xs mt-2">Haz doble clic en el bajo del acorde para alternar entre sostenidos o bemoles de toda la estructura.</p>
+                                                    <p className="text-center text-xs mt-2">Haz múltiples clics en una nota alterada para cambiar entre sostenido o bemol libremente.</p>
                                                 </div>
                                             ) : reverseNotes.length === 1 ? (
                                                 <div className="flex flex-col items-center justify-center h-full text-amber-500 mt-10 animate-in fade-in zoom-in duration-300">
@@ -2367,6 +2345,7 @@
                         )}
                     </div>
 
+                    {}
                     <footer className="fixed bottom-2 md:bottom-4 left-1/2 -translate-x-1/2 w-[98%] md:w-[95%] max-w-4xl flex flex-col items-center gap-1.5 md:gap-2 z-50 print:hidden">
                         <div className="bg-black/95 backdrop-blur-xl border border-slate-800 p-1.5 md:p-2 rounded-2xl flex flex-nowrap overflow-x-auto gap-1.5 md:gap-2 shadow-[0_-10px_40px_rgba(0,0,0,0.5)] w-full justify-start md:justify-center no-scrollbar snap-x">
                             
