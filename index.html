@@ -28,7 +28,8 @@
             .text-amber-500 { color: #d97706 !important; font-weight: bold; }
             .border-slate-800, .border-slate-700 { border-color: #cbd5e1 !important; }
             .print\:hidden { display: none !important; }
-            .print\:grid-wrap { display: flex !important; flex-wrap: wrap !important; gap: 16px; overflow: visible !important; justify-content: center; }
+            .print\:grid-wrap { display: flex !important; flex-wrap: wrap !important; gap: 16px; justify-content: center; width: 100% !important; }
+            .print\:grid-wrap > div { flex: 0 0 calc(25% - 16px) !important; max-width: calc(25% - 16px) !important; margin-bottom: 20px !important; }
             .print\:break-inside-avoid { break-inside: avoid; }
             * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
         }
@@ -40,7 +41,7 @@
     <div id="root"></div>
 
     <script type="text/babel">
-        const { useState, useMemo, useEffect, useRef } = React;
+        const { useState, useMemo, useEffect, useRef, useCallback } = React;
 
         const Icon = function(props) {
             const name = props.name;
@@ -89,12 +90,18 @@
             if (!config.isOpen) return null;
             const [inputValue, setInputValue] = useState(config.defaultValue || '');
 
-            useEffect(function() { setInputValue(config.defaultValue || ''); }, [config]);
+            useEffect(function() {
+                setInputValue(config.defaultValue || '');
+            }, [config]);
 
             const handleConfirm = function() {
-                if (config.type === 'prompt') { if (config.onConfirm) config.onConfirm(inputValue); } 
-                else if (config.type === 'confirm') { if (config.onConfirm) config.onConfirm(true); } 
-                else { if (config.onConfirm) config.onConfirm(); }
+                if (config.type === 'prompt') {
+                    if (config.onConfirm) config.onConfirm(inputValue);
+                } else if (config.type === 'confirm') {
+                    if (config.onConfirm) config.onConfirm(true);
+                } else {
+                    if (config.onConfirm) config.onConfirm();
+                }
                 onClose();
             };
 
@@ -111,14 +118,22 @@
                             {config.type === 'alert' ? 'Aviso' : config.type === 'confirm' ? 'Confirmación' : 'Entrada Requerida'}
                         </h3>
                         <p className="text-slate-300 mb-6">{config.message}</p>
+                        
                         {config.type === 'prompt' && (
-                            <input type="text" className="w-full bg-[#0f172a] border border-slate-700 p-3 rounded-xl text-white font-bold focus:ring-2 ring-amber-500 outline-none transition-all mb-6" value={inputValue} onChange={function(e) { setInputValue(e.target.value); }} autoFocus />
+                            <input 
+                                type="text" 
+                                className="w-full bg-[#0f172a] border border-slate-700 p-3 rounded-xl text-white font-bold focus:ring-2 ring-amber-500 outline-none transition-all mb-6"
+                                value={inputValue}
+                                onChange={function(e) { setInputValue(e.target.value); }}
+                                autoFocus
+                            />
                         )}
+
                         <div className="flex justify-end gap-3">
                             {(config.type === 'confirm' || config.type === 'prompt') && (
-                                <button type="button" onClick={handleCancel} className="px-5 py-2.5 rounded-xl font-bold bg-slate-800 text-slate-300 hover:bg-slate-700 transition-colors">Cancelar</button>
+                                <button onClick={handleCancel} className="px-5 py-2.5 rounded-xl font-bold bg-slate-800 text-slate-300 hover:bg-slate-700 transition-colors">Cancelar</button>
                             )}
-                            <button type="button" onClick={handleConfirm} className="px-5 py-2.5 rounded-xl font-bold bg-amber-500 text-slate-950 hover:bg-amber-400 transition-colors">Aceptar</button>
+                            <button onClick={handleConfirm} className="px-5 py-2.5 rounded-xl font-bold bg-amber-500 text-slate-950 hover:bg-amber-400 transition-colors">Aceptar</button>
                         </div>
                     </div>
                 </div>
@@ -177,6 +192,7 @@
         const MIDI_TO_NOTE_SHARP = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
         const MIDI_TO_NOTE_FLAT = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B'];
         const DISPLAY_NOTES = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'Ab', 'A', 'Bb', 'B'];
+
         const LATIN_MAP = { 'C':'Do', 'C#':'Do#', 'Db':'Reb', 'D':'Re', 'D#':'Re#', 'Eb':'Mib', 'E':'Mi', 'F':'Fa', 'F#':'Fa#', 'Gb':'Solb', 'G':'Sol', 'G#':'Sol#', 'Ab':'Lab', 'A':'La', 'A#':'La#', 'Bb':'Sib', 'B':'Si' };
         
         const translateNote = function(noteStr, mode) {
@@ -193,7 +209,7 @@
             } else {
                 const cleanRoot = rootName.replace('m', '');
                 if (['F', 'Bb', 'Eb', 'Ab', 'Db', 'Gb'].indexOf(cleanRoot) !== -1) useFlats = true;
-                if (['C', 'G', 'D'].indexOf(cleanRoot) !== -1 && (quality.indexOf('m') !== -1 || quality.indexOf('7') !== -1 || quality.indexOf('dim') !== -1)) {
+                if (['C', 'G', 'D'].indexOf(cleanRoot) !== -1 && (quality && (quality.indexOf('m') !== -1 || quality.indexOf('7') !== -1 || quality.indexOf('dim') !== -1))) {
                     if (cleanRoot === 'D' && quality === '7') useFlats = false; 
                     else useFlats = true; 
                 }
@@ -204,7 +220,7 @@
 
         const INVERSION_NAMES_QUADS = ['Fund.', '1ra Inv.', '2da Inv.', '3ra Inv.'];
         const INVERSION_NAMES_TRIADS = ['Fund.', '1ra Inv.', '2da Inv.'];
-        const STRING_TUNINGS = [64, 59, 55, 50, 45, 40];
+        const STRING_TUNINGS = [64, 59, 55, 50, 45, 40]; 
 
         const getScaleData = function(qualityId, degreeLabel) {
             let type = '';
@@ -230,10 +246,10 @@
             }
 
             if (!type) {
-                if (qualityId.indexOf('maj') !== -1) type = 'jonico';
-                else if (qualityId.indexOf('m7b5') !== -1 || qualityId.indexOf('dim') !== -1) type = 'locrio';
-                else if (qualityId.indexOf('m') !== -1 && qualityId.indexOf('maj') === -1) type = 'dorico';
-                else if (qualityId.indexOf('alt') !== -1) type = 'alterado';
+                if (qualityId && qualityId.indexOf('maj') !== -1) type = 'jonico';
+                else if (qualityId && (qualityId.indexOf('m7b5') !== -1 || qualityId.indexOf('dim') !== -1)) type = 'locrio';
+                else if (qualityId && (qualityId.indexOf('m') !== -1 && qualityId.indexOf('maj') === -1)) type = 'dorico';
+                else if (qualityId && qualityId.indexOf('alt') !== -1) type = 'alterado';
                 else type = 'mixolidio';
             }
 
@@ -640,7 +656,6 @@
 
                 dict.forEach(function(def) {
                     let isMatch = false;
-
                     if (intervals.length === def.intervals.length && intervals.every(function(v, i) { return v === def.intervals[i]; })) {
                         isMatch = true;
                     } else if (!isMatch && intervals.length >= 3 && def.intervals.indexOf(7) !== -1 && def.id.indexOf('_no5') === -1) {
@@ -649,14 +664,12 @@
                             isMatch = true;
                         }
                     }
-
                     if (!isMatch && intervals.length >= 3 && (def.id === '13' || def.id === 'Maj13' || def.id === '11' || def.id === 'm11')) {
                         const minimalDef = def.intervals.filter(function(i) { return i !== 7 && i !== 2; }); 
                         if (intervals.length === minimalDef.length && intervals.every(function(v, i) { return v === minimalDef[i]; })) {
                             isMatch = true;
                         }
                     }
-
                     if (isMatch) {
                         const explicitRoot = notes.find(n => (n.note % 12) === rootPC && n.explicitEnharmonic);
                         const rootPref = explicitRoot ? explicitRoot.explicitEnharmonic : 'sharps';
@@ -692,12 +705,8 @@
             const uniqueMatches = [];
             const seenNames = new Set();
             matches.forEach(function(m) {
-                if (!seenNames.has(m.name)) {
-                    seenNames.add(m.name);
-                    uniqueMatches.push(m);
-                }
+                if (!seenNames.has(m.name)) { seenNames.add(m.name); uniqueMatches.push(m); }
             });
-
             return uniqueMatches;
         };
 
@@ -726,8 +735,8 @@
             for(let i=0; i<=numFrets; i++) fretsArray.push(i);
             
             let rankStyle = "", rankText = "";
-            if (vlRank === 1) { rankStyle = "bg-emerald-500 text-slate-900 border-emerald-500"; rankText = "Enlace Óptimo"; }
-            else if (vlRank === 2) { rankStyle = "bg-amber-500 text-slate-900 border-amber-500"; rankText = "Enlace Aceptable"; }
+            if (vlRank === 1) { rankStyle = "bg-emerald-500 text-slate-900 border-emerald-500"; rankText = "Óptimo"; }
+            else if (vlRank === 2) { rankStyle = "bg-amber-500 text-slate-900 border-amber-500"; rankText = "Aceptable"; }
             else if (vlRank === 3) { rankStyle = "bg-orange-600 text-white border-orange-600"; rankText = "Salto Ligero"; }
             else if (vlRank >= 4) { rankStyle = "bg-rose-600 text-white border-rose-600"; rankText = "Salto Brusco"; }
 
@@ -768,10 +777,10 @@
 
                     {options.isBuilder && (
                         <div className="absolute top-2 right-2 flex justify-center gap-1 mb-2 print:hidden hide-on-pdf z-30">
-                            <button type="button" onClick={function(e){ e.stopPropagation(); if(options.onEdit) options.onEdit(); }} className="text-slate-400 hover:text-amber-500 text-[9px] uppercase font-bold flex items-center gap-1 transition-colors bg-slate-800/80 px-2 py-1.5 rounded border border-slate-700">
+                            <button onClick={function(e){ e.stopPropagation(); if(options.onEdit) options.onEdit(); }} className="text-slate-400 hover:text-amber-500 text-[9px] uppercase font-bold flex items-center gap-1 transition-colors bg-slate-800/80 px-2 py-1.5 rounded border border-slate-700">
                                  <Icon name="Edit2" size={10}/>
                             </button>
-                            <button type="button" onClick={function(e){ e.stopPropagation(); if(options.onDelete) options.onDelete(); }} className="text-slate-400 hover:text-rose-500 text-[9px] uppercase font-bold flex items-center gap-1 transition-colors bg-slate-800/80 px-2 py-1.5 rounded border border-slate-700">
+                            <button onClick={function(e){ e.stopPropagation(); if(options.onDelete) options.onDelete(); }} className="text-slate-400 hover:text-rose-500 text-[9px] uppercase font-bold flex items-center gap-1 transition-colors bg-slate-800/80 px-2 py-1.5 rounded border border-slate-700">
                                  <Icon name="Trash2" size={10}/>
                             </button>
                         </div>
@@ -784,12 +793,12 @@
                             <span className="text-slate-500 text-[9px] mt-0.5">{dropLabel}</span>
                         </div>
                         {!hideInteractive && !isLocked && !options.isBuilder && (
-                            <button type="button" onClick={function(e) { e.stopPropagation(); onPlay(fingering); }} className="bg-slate-800 hover:bg-amber-500 hover:text-slate-900 p-2.5 rounded-full transition-all text-slate-300 shadow-md shrink-0 ml-2 print:hidden group-hover:bg-slate-700 z-20 relative hide-on-pdf">
+                            <button onClick={function(e) { e.stopPropagation(); onPlay(fingering); }} className="bg-slate-800 hover:bg-amber-500 hover:text-slate-900 p-2.5 rounded-full transition-all text-slate-300 shadow-md shrink-0 ml-2 print:hidden group-hover:bg-slate-700 z-20 relative hide-on-pdf">
                                 <Icon name="Play" size={12} />
                             </button>
                         )}
                         {!hideInteractive && !isLocked && options.isBuilder && (
-                            <button type="button" onClick={function(e) { e.stopPropagation(); onPlay(fingering); }} className="bg-slate-800 hover:bg-amber-500 hover:text-slate-900 p-2 rounded-full transition-all text-slate-300 shadow-md shrink-0 ml-1 print:hidden group-hover:bg-slate-700 z-20 relative hide-on-pdf">
+                            <button onClick={function(e) { e.stopPropagation(); onPlay(fingering); }} className="bg-slate-800 hover:bg-amber-500 hover:text-slate-900 p-2 rounded-full transition-all text-slate-300 shadow-md shrink-0 ml-1 print:hidden group-hover:bg-slate-700 z-20 relative hide-on-pdf">
                                 <Icon name="Play" size={10} />
                             </button>
                         )}
@@ -918,6 +927,9 @@
             );
         };
 
+        const getQualsForTrack = function(t) { return t === 'triads' ? TRIAD_QUALITIES : t === 'shells' ? SHELL_QUALITIES : t === 'tensions' ? TENSION_QUALITIES : QUAD_QUALITIES; };
+        const getDropsForTrack = function(t) { return t === 'triads' ? TRIAD_VOICINGS : t === 'shells' ? SHELL_VOICINGS : t === 'tensions' ? TENSION_VOICINGS : QUAD_VOICINGS; };
+
         const App = function() {
             const [appTrack, setAppTrack] = useState(null); 
             const [activeTab, setActiveTab] = useState('study'); 
@@ -963,8 +975,8 @@
             const [mixDrop2, setMixDrop2] = useState('drop3');
             const [mixBass2, setMixBass2] = useState(6);
 
-            const [freeModeTab, setFreeModeTab] = useState('single'); 
             const [freeTrack, setFreeTrack] = useState('quads'); 
+            const [freeModeTab, setFreeModeTab] = useState('single'); 
             const [freeRoot, setFreeRoot] = useState('C'); 
             const [freeQuality, setFreeQuality] = useState('maj7');
             const [freeDrop, setFreeDrop] = useState('drop2');
@@ -980,7 +992,6 @@
 
             const [reverseNotes, setReverseNotes] = useState([]);
             const detectedChords = useMemo(function() { return analyzeChord(reverseNotes, notationMode); }, [reverseNotes, notationMode]);
-            const customDetectedChords = useMemo(function() { return analyzeChord(customNotes, notationMode); }, [customNotes, notationMode]);
 
             const [isPlaying, setIsPlaying] = useState(false);
             const [bpm, setBpm] = useState(90);
@@ -1128,23 +1139,13 @@
                 return intervals[diff] || `Distancia de ${diff} semitonos`;
             };
 
-            const getActivePlan = function() {
-                if (appTrack === 'triads') return STUDY_PLAN_TRIADS;
-                if (appTrack === 'shells') return STUDY_PLAN_SHELLS;
-                if (appTrack === 'tensions') return STUDY_PLAN_TENSIONS;
-                return STUDY_PLAN_QUADS;
-            };
-
-            const getQualsForTrack = function(t) { return t === 'triads' ? TRIAD_QUALITIES : t === 'shells' ? SHELL_QUALITIES : t === 'tensions' ? TENSION_QUALITIES : QUAD_QUALITIES; };
-            const getDropsForTrack = function(t) { return t === 'triads' ? TRIAD_VOICINGS : t === 'shells' ? SHELL_VOICINGS : t === 'tensions' ? TENSION_VOICINGS : QUAD_VOICINGS; };
-
-            const activePlan = getActivePlan();
+            const activePlan = appTrack === 'triads' ? STUDY_PLAN_TRIADS : appTrack === 'shells' ? STUDY_PLAN_SHELLS : appTrack === 'tensions' ? STUDY_PLAN_TENSIONS : STUDY_PLAN_QUADS;
             const activeQuals = getQualsForTrack(appTrack || 'quads');
             const activeDrops = getDropsForTrack(appTrack || 'quads');
+            
             const freeQuals = getQualsForTrack(freeTrack);
             const freeDrops = getDropsForTrack(freeTrack);
             
-            const isStrictTwo = appTrack === 'shells' || appTrack === 'tensions';
             const completedList = appTrack === 'triads' ? completedTriads : appTrack === 'shells' ? completedShells : appTrack === 'tensions' ? completedTensions : completedQuads;
             const setCompletedList = appTrack === 'triads' ? setCompletedTriads : appTrack === 'shells' ? setCompletedShells : appTrack === 'tensions' ? setCompletedTensions : setCompletedQuads;
 
@@ -1158,22 +1159,6 @@
             }, [studyProgressionStep, isPlaying, activeTab]);
 
             useEffect(function() {
-                if (isPlaying) {
-                    const stepEl = document.getElementById("chord-step-" + activeChordIdx);
-                    if (stepEl) stepEl.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
-                    const fbEl = document.getElementById("fretboard-wrap-" + activeChordIdx);
-                    if (fbEl) fbEl.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
-                }
-            }, [activeChordIdx, isPlaying]);
-
-            useEffect(function() {
-                const activeModuleBtn = document.getElementById("module-btn-" + currentModuleIdx);
-                if (activeModuleBtn) {
-                    setTimeout(function() { activeModuleBtn.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' }); }, 50);
-                }
-            }, [currentModuleIdx]);
-
-            useEffect(function() {
                 setSelectedPath([]); setStepRatings({}); 
                 if (!sessionActive) { setStudyProgressionStep(0); setIsPlaying(false); } 
                 else { setStudyProgressionStep(0); }
@@ -1181,11 +1166,6 @@
 
             useEffect(function() {
                 setIsPlaying(false); setBuilderSeq([]); setPendingOptions([]); setCurrentModuleIdx(0); setSessionActive(false); setStudyPhaseIdx(0); setStudyKeyIdx(0); setStudyInvIdx(0); setLinkStrategy('optimal'); setEditingIndex(null);
-                
-                if (appTrack === 'triads') { setFreeTrack('triads'); setFreeQuality('maj'); setFreeDrop('closed'); } 
-                else if (appTrack === 'shells') { setFreeTrack('shells'); setFreeQuality('maj7_sh'); setFreeDrop('fixed'); } 
-                else if (appTrack === 'tensions') { setFreeTrack('tensions'); setFreeQuality('maj9'); setFreeDrop('fixed'); } 
-                else { setFreeTrack('quads'); setFreeQuality('maj7'); setFreeDrop('drop2'); }
             }, [appTrack]);
 
             useEffect(function() {
@@ -1205,7 +1185,7 @@
                         return prev.map(function(item) {
                             if (item.isCustom) return item; 
                             const opts = generateChordData(item.queryRoot, item.quality, item.drop, item.bassString, getQualsForTrack(item.track), null, item.track, notationMode);
-                            if (opts.length === 0) return item; // Fallback to existing item if no opts
+                            if (opts.length === 0) return item;
                             const updated = opts.find(function(o) { return o.fingering.every(function(f, idx) { return f.note === item.fingering[idx].note && f.string === item.fingering[idx].string; }); }) || opts[0];
                             return Object.assign({}, updated, { vlRank: item.vlRank, prevFingering: item.prevFingering, dist: item.dist, track: item.track });
                         });
@@ -1315,12 +1295,6 @@
                 return path;
             }, [studyData, activeExerciseConfig, sessionActive, linkStrategy]);
 
-            const updateRating = function(idx, rating) {
-                const newRatings = Object.assign({}, stepRatings);
-                newRatings[idx] = rating;
-                setStepRatings(newRatings);
-            };
-
             function handleNext() {
                 if (!activeExerciseConfig) return;
                 if (studyInvIdx < activeExerciseConfig.maxInvs - 1) {
@@ -1403,154 +1377,17 @@
                 return generateChordData(freeRoot, freeQuality, freeDrop, freeBassString, freeQuals, null, freeTrack, notationMode);
             }, [freeRoot, freeQuality, freeDrop, freeBassString, freeQuals, freeTrack, notationMode]);
 
-            function updateSequenceFrom(seq, startIndex) {
-                 let newSeq = [...seq];
-                 for(let i = startIndex; i < newSeq.length; i++) {
-                     let prevFingering = i > 0 && newSeq[i-1] ? newSeq[i-1].fingering : null; // Safe check for newSeq[i-1]
-                     if (newSeq[i].isCustom) {
-                         if (prevFingering) {
-                             newSeq[i] = Object.assign({}, newSeq[i], { dist: getVoiceLeadingDistance(prevFingering, newSeq[i].fingering), prevFingering: prevFingering });
-                         } else {
-                             newSeq[i] = Object.assign({}, newSeq[i], { dist: 0, prevFingering: null });
-                         }
-                         continue;
-                     }
-                     const opts = generateChordData(newSeq[i].queryRoot, newSeq[i].quality, newSeq[i].drop, newSeq[i].bassString, getQualsForTrack(newSeq[i].track), null, newSeq[i].track, notationMode);
-                     if (opts.length > 0) {
-                         if (prevFingering) {
-                             opts.forEach(function(o) { o.dist = getVoiceLeadingDistance(prevFingering, o.fingering); o.prevFingering = prevFingering; });
-                             opts.sort(function(a,b) { return a.dist - b.dist; });
-                         }
-                         
-                         let chosen = null;
-                         if (linkStrategy === 'fund_to_fund') {
-                             chosen = opts.find(function(o) { return o.name === 'Fund.' || o.name.indexOf('1-') === 0 || (o.name.indexOf('3-') === 0 && o.name.indexOf('RL') !== -1); });
-                         } else if (linkStrategy === 'keep_inv') {
-                             chosen = opts.find(function(o) { return o.name === newSeq[i].name; });
-                         }
-                         if (!chosen) chosen = opts[0];
-                         
-                         chosen.vlRank = 1;
-                         chosen.track = newSeq[i].track;
-                         newSeq[i] = chosen;
-                     }
-                 }
-                 return newSeq;
-            }
+            const customDetectedChords = useMemo(function() { return analyzeChord(customNotes, notationMode); }, [customNotes, notationMode]);
 
-            function handleAddBuilderStart(chordData) {
-                const newData = Object.assign({}, chordData, { prevFingering: null, track: freeTrack }); // Add track property
-                setBuilderSeq([newData]);
-                playVoicing(chordData.fingering);
-            }
-
-            function handleSearchOptions() {
-                const opts = generateChordData(freeRoot, freeQuality, freeDrop, freeBassString, getQualsForTrack(freeTrack), null, freeTrack, notationMode);
+            // ==========================================
+            // BUILDER LOGIC (NO AUTO-ADD, REACTIVE SEARCH)
+            // ==========================================
+            const handleSearchOptions = useCallback(function(silent = false) {
+                const currentQuals = getQualsForTrack(freeTrack);
+                const opts = generateChordData(freeRoot, freeQuality, freeDrop, freeBassString, currentQuals, null, freeTrack, notationMode);
+                
                 if (opts.length === 0) {
-                    showAlert("No hay digitaciones posibles sin cuerdas al aire para esa configuración.");
-                    setPendingOptions([]); 
-                    return;
-                }
-                
-                let prevFingering = null;
-                if (editingIndex !== null && editingIndex > 0 && builderSeq[editingIndex - 1]) {
-                    prevFingering = builderSeq[editingIndex - 1].fingering;
-                } else if (editingIndex === null && builderSeq.length > 0 && builderSeq[builderSeq.length - 1]) {
-                    prevFingering = builderSeq[builderSeq.length - 1].fingering;
-                }
-
-                if (prevFingering) {
-                    opts.forEach(function(o) { o.dist = getVoiceLeadingDistance(prevFingering, o.fingering); o.prevFingering = prevFingering; });
-                    opts.sort(function(a,b) { return a.dist - b.dist; });
-                    opts.forEach(function(o) {
-                        if (o.dist <= 2) o.vlRank = 1; else if (o.dist <= 5) o.vlRank = 2; else if (o.dist <= 9) o.vlRank = 3; else o.vlRank = 4;
-                    });
-                    opts.sort(function(a,b) { if (a.vlRank !== b.vlRank) return a.vlRank - b.vlRank; return a.dist - b.dist; });
-                } else {
-                    opts.forEach(function(o) { o.dist = 0; o.vlRank = 0; o.prevFingering = null; });
-                }
-                setPendingOptions(opts);
-            }
-
-            function handleSelectPendingOption(chordData) {
-                let newSeq = [...builderSeq];
-                const finalChord = Object.assign({}, chordData, { track: freeTrack });
-                if (editingIndex !== null) {
-                    newSeq[editingIndex] = finalChord;
-                    newSeq = updateSequenceFrom(newSeq, editingIndex + 1);
-                    setEditingIndex(null);
-                } else {
-                    newSeq.push(finalChord);
-                }
-                setBuilderSeq(newSeq); 
-                setPendingOptions([]); 
-                playVoicing(finalChord.fingering);
-            }
-
-            function addCustomChordToBuilder() {
-                if (customNotes.length === 0) return showAlert("Debes seleccionar al menos una nota.");
-                
-                let selectedMatch = customDetectedChords.find(m => m.name === customName) || (customDetectedChords.length > 0 ? customDetectedChords[0] : null);
-                
-                let finalRootMidi = 60;
-                let intervalName = 'Personalizado';
-                let finalQuality = '';
-
-                if (selectedMatch) {
-                    const rootNotes = customNotes.filter(n => n.note % 12 === selectedMatch.rootPC);
-                    if (rootNotes.length > 0) {
-                        finalRootMidi = Math.min(...rootNotes.map(n => n.note));
-                    } else {
-                        finalRootMidi = Math.min(...customNotes.map(n => n.note));
-                    }
-                    finalQuality = selectedMatch.quality;
-                } else if (customNotes.length > 0) {
-                    finalRootMidi = Math.min(...customNotes.map(n => n.note));
-                }
-
-                if (customNotes.length > 0) {
-                    const sortedNotes = [...new Set(customNotes.map(n => n.note))].sort((a,b) => a-b);
-                    const degrees = sortedNotes.map(n => getIntervalDegree(n, finalRootMidi, finalQuality));
-                    intervalName = [...new Set(degrees)].join('-');
-                }
-
-                const nameToUse = customName.trim() || (selectedMatch ? selectedMatch.name : 'Personalizado');
-
-                const newChord = {
-                    isCustom: true,
-                    name: intervalName,
-                    formattedChordName: nameToUse,
-                    fingering: customNotes.map(n => ({ string: n.string, fret: n.fret, note: n.note, explicitEnharmonic: n.explicitEnharmonic })),
-                    prevFingering: null,
-                    dist: 0,
-                    vlRank: 0,
-                    track: 'custom',
-                    rootMidi: finalRootMidi,
-                    quality: finalQuality
-                };
-                
-                let newSeq = [...builderSeq];
-                if (editingIndex !== null) {
-                    newSeq[editingIndex] = newChord;
-                    newSeq = updateSequenceFrom(newSeq, editingIndex + 1);
-                    setEditingIndex(null);
-                } else {
-                    if (newSeq.length > 0) {
-                        const prevFingering = newSeq[newSeq.length - 1].fingering;
-                        newChord.prevFingering = prevFingering;
-                        newChord.dist = getVoiceLeadingDistance(prevFingering, newChord.fingering);
-                    }
-                    newSeq.push(newChord);
-                }
-                
-                setBuilderSeq(newSeq);
-                setShowCustomModal(false); setCustomNotes([]); setCustomName(''); setPendingOptions([]);
-            }
-
-            function handleSearchOptions() {
-                const opts = generateChordData(freeRoot, freeQuality, freeDrop, freeBassString, freeQuals, null, freeTrack, notationMode);
-                if (opts.length === 0) {
-                    showAlert("No hay digitaciones posibles sin cuerdas al aire para esa configuración.");
+                    if (!silent) showAlert("No hay digitaciones posibles sin cuerdas al aire para esa configuración.");
                     setPendingOptions([]); return;
                 }
                 
@@ -1560,16 +1397,13 @@
 
                 if (prevFingering) {
                     opts.forEach(function(o) { o.dist = getVoiceLeadingDistance(prevFingering, o.fingering); o.prevFingering = prevFingering; });
-                    opts.sort(function(a,b) { return a.dist - b.dist; });
-                    opts.forEach(function(o) {
-                        if (o.dist <= 2) o.vlRank = 1; else if (o.dist <= 5) o.vlRank = 2; else if (o.dist <= 9) o.vlRank = 3; else o.vlRank = 4;
-                    });
+                    opts.forEach(function(o) { if (o.dist <= 2) o.vlRank = 1; else if (o.dist <= 5) o.vlRank = 2; else if (o.dist <= 9) o.vlRank = 3; else o.vlRank = 4; });
                     opts.sort(function(a,b) { if (a.vlRank !== b.vlRank) return a.vlRank - b.vlRank; return a.dist - b.dist; });
                 } else {
                     opts.forEach(function(o) { o.dist = 0; o.vlRank = 0; o.prevFingering = null; });
                 }
                 setPendingOptions(opts);
-            }
+            }, [freeTrack, freeRoot, freeQuality, freeDrop, freeBassString, notationMode, builderSeq, editingIndex]);
 
             function handleSelectPendingOption(chordData) {
                 let newSeq = [...builderSeq];
@@ -1584,20 +1418,44 @@
                 setBuilderSeq(newSeq); setPendingOptions([]); playVoicing(finalChord.fingering);
             }
 
-            function handleEditInModal(data, idx) {
+            const updateSequenceFrom = function(seq, startIndex) {
+                 let newSeq = [...seq];
+                 for(let i = startIndex; i < newSeq.length; i++) {
+                     let prevFingering = i > 0 ? newSeq[i-1].fingering : null;
+                     if (newSeq[i].isCustom) {
+                         if (prevFingering) {
+                             newSeq[i] = Object.assign({}, newSeq[i], { dist: getVoiceLeadingDistance(prevFingering, newSeq[i].fingering), prevFingering: prevFingering });
+                         } else {
+                             newSeq[i] = Object.assign({}, newSeq[i], { dist: 0, prevFingering: null });
+                         }
+                         continue;
+                     }
+                     const trackToUse = newSeq[i].track || 'quads';
+                     const trackQuals = getQualsForTrack(trackToUse);
+                     const opts = generateChordData(newSeq[i].queryRoot, newSeq[i].quality, newSeq[i].drop, newSeq[i].bassString, trackQuals, null, trackToUse, notationMode);
+                     if (opts.length > 0) {
+                         if (prevFingering) {
+                             opts.forEach(function(o) { o.dist = getVoiceLeadingDistance(prevFingering, o.fingering); o.prevFingering = prevFingering; });
+                             opts.sort(function(a,b) { return a.dist - b.dist; });
+                         }
+                         let chosen = null;
+                         if (linkStrategy === 'fund_to_fund') chosen = opts.find(function(o) { return o.name === 'Fund.' || o.name.indexOf('1-') === 0 || (o.name.indexOf('3-') === 0 && o.name.indexOf('RL') !== -1); });
+                         else if (linkStrategy === 'keep_inv') chosen = opts.find(function(o) { return o.name === newSeq[i].name; });
+                         if (!chosen) chosen = opts[0];
+                         chosen.vlRank = 1; chosen.track = trackToUse; newSeq[i] = chosen;
+                     }
+                 }
+                 return newSeq;
+            };
+
+            function handleEditChord(idx) {
+                const data = builderSeq[idx];
                 setEditingIndex(idx);
-                if (data.isCustom) {
-                    setCustomNotes(data.fingering.map(f => ({ string: f.string, fret: f.fret, note: f.note, explicitEnharmonic: f.explicitEnharmonic || null })));
-                    setCustomName(data.formattedChordName);
-                    setShowCustomModal(true);
-                } else {
-                    setFreeTrack(data.track || 'quads'); 
-                    setFreeRoot(data.queryRoot); 
-                    setFreeQuality(data.quality); 
-                    setFreeDrop(data.drop); 
-                    setFreeBassString(data.bassString); 
-                    setPendingOptions([]);
-                }
+                // Carga las notas exactas del acorde en el diapasón interactivo libre
+                setCustomNotes(data.fingering.map(f => ({ string: f.string, fret: f.fret, note: f.note, explicitEnharmonic: f.explicitEnharmonic || null })));
+                setCustomName(data.formattedChordName);
+                setShowCustomModal(true);
+                setPendingOptions([]);
             }
 
             function handleDeleteBuilderChord(idx) {
@@ -1610,15 +1468,62 @@
                 if (editingIndex === idx) setEditingIndex(null);
             }
 
-            function saveCurrentProgression() {
-                showPrompt("Dale un nombre a tu progresión favorita:", function(name) {
-                    if (name && name.trim() !== '') {
-                        const newProg = { id: Date.now(), name: name.trim(), seq: builderSeq, track: appTrack };
-                        setSavedProgressions([...savedProgressions, newProg]);
+            function addCustomChordToBuilder() {
+                if (customNotes.length === 0) return showAlert("Debes seleccionar al menos una nota.");
+                let selectedMatch = customDetectedChords.find(m => m.name === customName) || (customDetectedChords.length > 0 ? customDetectedChords[0] : null);
+                let finalRootMidi = 60; let intervalName = 'Personalizado'; let finalQuality = '';
+
+                if (selectedMatch) {
+                    const rootNotes = customNotes.filter(n => n.note % 12 === selectedMatch.rootPC);
+                    if (rootNotes.length > 0) finalRootMidi = Math.min(...rootNotes.map(n => n.note));
+                    else {
+                        const lowest = Math.min(...customNotes.map(n => n.note));
+                        let r = lowest; while(r % 12 !== selectedMatch.rootPC) r--; finalRootMidi = r;
                     }
-                });
+                    finalQuality = selectedMatch.quality;
+                } else if (customNotes.length > 0) {
+                    finalRootMidi = Math.min(...customNotes.map(n => n.note));
+                }
+
+                if (customNotes.length > 0) {
+                    const sortedNotes = [...new Set(customNotes.map(n => n.note))].sort((a,b) => a-b);
+                    const degrees = sortedNotes.map(n => getIntervalDegree(n, finalRootMidi, finalQuality));
+                    intervalName = [...new Set(degrees)].join('-');
+                }
+
+                const nameToUse = customName.trim() || (selectedMatch ? selectedMatch.name : 'Personalizado');
+                const newChord = {
+                    isCustom: true, name: intervalName, formattedChordName: nameToUse,
+                    fingering: customNotes.map(n => ({ string: n.string, fret: n.fret, note: n.note, explicitEnharmonic: n.explicitEnharmonic })),
+                    prevFingering: null, dist: 0, vlRank: 0, track: 'custom', rootMidi: finalRootMidi, quality: finalQuality
+                };
+                
+                let newSeq = [...builderSeq];
+                if (editingIndex !== null) {
+                    // Si se está editando, calcular su distancia respecto al acorde anterior (si existe)
+                    if (editingIndex > 0) {
+                        const prevFingering = newSeq[editingIndex - 1].fingering;
+                        newChord.prevFingering = prevFingering;
+                        newChord.dist = getVoiceLeadingDistance(prevFingering, newChord.fingering);
+                    } else {
+                        newChord.prevFingering = null;
+                        newChord.dist = 0;
+                    }
+                    newSeq[editingIndex] = newChord;
+                    newSeq = updateSequenceFrom(newSeq, editingIndex + 1);
+                    setEditingIndex(null);
+                } else {
+                    if (newSeq.length > 0) {
+                        const prevFingering = newSeq[newSeq.length - 1].fingering;
+                        newChord.prevFingering = prevFingering; newChord.dist = getVoiceLeadingDistance(prevFingering, newChord.fingering);
+                    }
+                    newSeq.push(newChord);
+                }
+                setBuilderSeq(newSeq); setShowCustomModal(false); setCustomNotes([]); setCustomName(''); setPendingOptions([]);
             }
-            function loadProgression(prog) { setBuilderSeq(prog.seq); setEditingIndex(null); setPendingOptions([]); }
+
+            function saveCurrentProgression() { showPrompt("Dale un nombre a tu progresión favorita:", function(name) { if (name && name.trim() !== '') setSavedProgressions([...savedProgressions, { id: Date.now(), name: name.trim(), seq: builderSeq }]); }); }
+            function loadProgression(prog) { setBuilderSeq(prog.seq); setEditingIndex(null); }
             function deleteProgression(id) { showConfirm("¿Seguro que deseas eliminar esta progresión guardada?", function() { setSavedProgressions(savedProgressions.filter(function(p) { return p.id !== id; })); }); }
 
             const getCompletedCount = function(track) {
@@ -1659,7 +1564,7 @@
                                     {id:'tensions', label:'Tensiones', desc:'Shell Voicing + Tensión y Acordes Rootless', color:'bg-slate-900 border-slate-800 hover:border-amber-500', tooltip: 'Agregamos colores (9nas, 11nas, 13nas) al esqueleto, y eliminamos la tónica (Rootless) para sonar a pianista.'}
                                 ].map(function(t) { return (
                                     <Tooltip key={t.id} text={t.tooltip}>
-                                        <button type="button" onClick={function(){setAppTrack(t.id);}} className={"p-6 rounded-2xl font-bold transition-all duration-300 hover:-translate-y-1 shadow-xl border flex flex-col items-center justify-center w-full group " + t.color}>
+                                        <button onClick={function(){setAppTrack(t.id);}} className={"p-6 rounded-2xl font-bold transition-all duration-300 hover:-translate-y-1 shadow-xl border flex flex-col items-center justify-center w-full group " + t.color}>
                                             <div className="text-xl mb-2 text-slate-200 group-hover:text-amber-400 transition-colors">{t.label}</div>
                                             <div className="text-xs font-normal text-slate-400 mb-4">{t.desc}</div>
                                             <div className="text-[10px] bg-slate-950/50 px-3 py-1 rounded-full text-amber-500">{getCompletedCount(t.id)} / {getTotalCount(t.id)} Completados</div>
@@ -1681,7 +1586,7 @@
                     {showHelp && (
                         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm print:hidden">
                             <div className="bg-slate-900 border border-slate-700 rounded-3xl p-6 md:p-10 max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl relative animate-in zoom-in-95">
-                                <button type="button" onClick={function(){setShowHelp(false);}} className="absolute top-6 right-6 text-slate-400 hover:text-white transition-colors">
+                                <button onClick={function(){setShowHelp(false);}} className="absolute top-6 right-6 text-slate-400 hover:text-white transition-colors">
                                     <Icon name="X" size={24}/>
                                 </button>
                                 <h2 className="text-2xl font-black text-amber-500 mb-6 flex items-center gap-3"><Icon name="Info" size={28}/> Metodología de Estudio</h2>
@@ -1704,7 +1609,7 @@
                                         <h3 className="font-bold text-white text-base mb-1">3. Voice Leading (Visión de Rayos X)</h3>
                                         <p>Ahora, en cada acorde posterior al primero, notarás <strong className="text-sky-400">círculos celestes fantasmas</strong>. Éstos te indican dónde se encontraban tus dedos en el acorde anterior, entrenando tu cerebro para ver la guitarra como voces que se mueven (Voice Leading) en vez de bloques estáticos.</p>
                                     </div>
-                                    <button type="button" onClick={function(){setShowHelp(false);}} className="w-full mt-4 bg-slate-800 hover:bg-slate-700 text-white font-bold py-3 rounded-xl transition-colors">Entendido</button>
+                                    <button onClick={function(){setShowHelp(false);}} className="w-full mt-4 bg-slate-800 hover:bg-slate-700 text-white font-bold py-3 rounded-xl transition-colors">Entendido</button>
                                 </div>
                             </div>
                         </div>
@@ -1720,16 +1625,15 @@
                                 </div>
                             </div>
                             <div className="flex bg-slate-900 p-1.5 rounded-xl border border-slate-800 shadow-inner w-full md:w-auto overflow-x-auto">
-                                <button type="button" onClick={function(){setActiveTab('study'); setIsPlaying(false); setEditingIndex(null);}} className={"flex-1 whitespace-nowrap px-4 md:px-6 py-2.5 rounded-lg text-xs md:text-sm font-bold transition-all " + (activeTab==='study'?'bg-amber-500 text-slate-950 shadow-md':'text-slate-400 hover:text-white')}>Estudio Guiado</button>
-                                <button type="button" onClick={function(){setActiveTab('free'); setIsPlaying(false); setFreeModeTab('builder');}} className={"flex-1 whitespace-nowrap px-4 md:px-6 py-2.5 rounded-lg text-xs md:text-sm font-bold transition-all " + (activeTab==='free'?'bg-amber-500 text-slate-950 shadow-md':'text-slate-400 hover:text-white')}>Lab Libre</button>
-                                <button type="button" onClick={function(){setActiveTab('reverse'); setIsPlaying(false); setEditingIndex(null);}} className={"flex-1 whitespace-nowrap px-4 md:px-6 py-2.5 rounded-lg text-xs md:text-sm font-bold transition-all " + (activeTab==='reverse'?'bg-amber-500 text-slate-950 shadow-md':'text-slate-400 hover:text-white')}>Reconocedor</button>
-                                <button type="button" onClick={function(){setShowHelp(true);}} className="flex-1 whitespace-nowrap px-3 md:px-4 py-2.5 rounded-lg text-xs md:text-sm font-bold text-slate-400 hover:text-amber-500 transition-colors flex justify-center items-center gap-2 border-l border-slate-800 ml-1 md:ml-2">
+                                <button onClick={function(){setActiveTab('study'); setIsPlaying(false); setEditingIndex(null);}} className={"flex-1 whitespace-nowrap px-4 md:px-6 py-2.5 rounded-lg text-xs md:text-sm font-bold transition-all " + (activeTab==='study'?'bg-amber-500 text-slate-950 shadow-md':'text-slate-400 hover:text-white')}>Estudio Guiado</button>
+                                <button onClick={function(){setActiveTab('free'); setIsPlaying(false); setFreeModeTab('builder');}} className={"flex-1 whitespace-nowrap px-4 md:px-6 py-2.5 rounded-lg text-xs md:text-sm font-bold transition-all " + (activeTab==='free'?'bg-amber-500 text-slate-950 shadow-md':'text-slate-400 hover:text-white')}>Lab Libre</button>
+                                <button onClick={function(){setActiveTab('reverse'); setIsPlaying(false); setEditingIndex(null);}} className={"flex-1 whitespace-nowrap px-4 md:px-6 py-2.5 rounded-lg text-xs md:text-sm font-bold transition-all " + (activeTab==='reverse'?'bg-amber-500 text-slate-950 shadow-md':'text-slate-400 hover:text-white')}>Reconocedor</button>
+                                <button onClick={function(){setShowHelp(true);}} className="flex-1 whitespace-nowrap px-3 md:px-4 py-2.5 rounded-lg text-xs md:text-sm font-bold text-slate-400 hover:text-amber-500 transition-colors flex justify-center items-center gap-2 border-l border-slate-800 ml-1 md:ml-2">
                                     <Icon name="Info" size={14}/> Ayuda
                                 </button>
                             </div>
                         </header>
 
-                        {/* ESTUDIO GUIADO */}
                         {activeTab === 'study' && activePlan && (
                             <div className="grid grid-cols-1 xl:grid-cols-4 gap-8">
                                 <div className="xl:col-span-1 print:hidden flex flex-row xl:flex-col gap-3 overflow-x-auto pb-4 xl:pb-0 no-scrollbar snap-x items-stretch">
@@ -1737,7 +1641,7 @@
                                     {activePlan.map(function(m, i) { 
                                         const isComp = completedList.indexOf(m.id) !== -1;
                                         return (
-                                        <button type="button" key={m.id} id={"module-btn-" + i} onClick={function(){setCurrentModuleIdx(i); setSessionActive(false); setStudyPhaseIdx(0); setStudyKeyIdx(0); setStudyInvIdx(0); setIsPlaying(false); }} className={"w-auto xl:w-full snap-center text-left px-5 py-3 xl:p-4 rounded-xl border transition-all relative flex flex-col justify-center shrink-0 whitespace-nowrap xl:whitespace-normal " + (currentModuleIdx===i?'border-amber-500 bg-amber-500/10 text-amber-400 shadow-[0_0_15px_rgba(245,158,11,0.1)]':'border-slate-800 bg-slate-900 hover:bg-slate-800 text-slate-300')}>
+                                        <button key={m.id} id={"module-btn-" + i} onClick={function(){setCurrentModuleIdx(i); setSessionActive(false); setStudyPhaseIdx(0); setStudyKeyIdx(0); setStudyInvIdx(0); setIsPlaying(false); }} className={"w-auto xl:w-full snap-center text-left px-5 py-3 xl:p-4 rounded-xl border transition-all relative flex flex-col justify-center shrink-0 whitespace-nowrap xl:whitespace-normal " + (currentModuleIdx===i?'border-amber-500 bg-amber-500/10 text-amber-400 shadow-[0_0_15px_rgba(245,158,11,0.1)]':'border-slate-800 bg-slate-900 hover:bg-slate-800 text-slate-300')}>
                                             {isComp && <div className="absolute top-2 right-2 xl:top-4 xl:right-4 text-emerald-500"><Icon name="CheckCircle2" size={14} /></div>}
                                             <div className="font-bold text-sm pr-6 leading-snug">{m.title}</div>
                                         </button>
@@ -1756,7 +1660,6 @@
                                                         <div className="space-y-1.5 lg:col-span-3">
                                                             <label className="text-[10px] uppercase font-bold text-slate-500 px-1 tracking-widest flex items-center gap-1">
                                                                 Módulo a Estudiar
-                                                                <Tooltip text="El plan de estudio forzará el aprendizaje paso a paso usando la estructura seleccionada."><Icon name="Info" size={10} className="text-amber-500/70 hover:text-amber-400 cursor-help" /></Tooltip>
                                                             </label>
                                                             <select value={currentModuleIdx} onChange={function(e){setCurrentModuleIdx(Number(e.target.value)); setStudyInvIdx(0);}} className="w-full bg-[#0f172a] border border-slate-700 p-3 rounded-xl text-white font-bold focus:ring-2 ring-amber-500 outline-none transition-all">
                                                                 {activePlan.map(function(m, i){ return <option key={i} value={i}>{m.title}</option>; })}
@@ -1765,7 +1668,6 @@
                                                         <div className="space-y-1.5">
                                                             <label className="text-[10px] uppercase font-bold text-slate-500 px-1 tracking-widest flex items-center gap-1">
                                                                 Fase
-                                                                <Tooltip text="Progresiones comunes en el Jazz usadas como entorno de entrenamiento real."><Icon name="Info" size={10} className="text-amber-500/70 hover:text-amber-400 cursor-help" /></Tooltip>
                                                             </label>
                                                             <select value={studyPhaseIdx} onChange={function(e){ setStudyPhaseIdx(Number(e.target.value)); setStudyKeyIdx(0); setStudyInvIdx(0); }} className="w-full bg-[#0f172a] border border-slate-700 p-3 rounded-xl text-white font-bold focus:ring-2 ring-amber-500 outline-none transition-all">
                                                                 {STUDY_PHASES.map(function(p, i){ return <option key={i} value={i}>{p.title}</option>; })}
@@ -1780,7 +1682,6 @@
                                                         <div className="space-y-1.5">
                                                             <label className="text-[10px] uppercase font-bold text-slate-500 px-1 tracking-widest flex items-center gap-1">
                                                                 Inversión Inicial
-                                                                <Tooltip text="Fuerza al algoritmo a comenzar la progresión con una inversión específica y construir desde allí."><Icon name="Info" size={10} className="text-amber-500/70 hover:text-amber-400 cursor-help" /></Tooltip>
                                                             </label>
                                                             <select value={studyInvIdx} onChange={function(e){ setStudyInvIdx(Number(e.target.value)); }} className="w-full bg-[#0f172a] border border-slate-700 p-3 rounded-xl text-white font-bold focus:ring-2 ring-amber-500 outline-none transition-all">
                                                                 {activeExerciseConfig ? activeExerciseConfig.invNames.map(function(inv, i){ return <option key={i} value={i}>{inv}</option>; }) : null}
@@ -1789,7 +1690,6 @@
                                                         <div className="space-y-1.5 lg:col-span-3">
                                                             <label className="text-[10px] uppercase font-bold text-slate-500 px-1 tracking-widest flex items-center gap-1">
                                                                 Estrategia de Enlace (Voice Leading)
-                                                                <Tooltip text="Determina CÓMO se calcularán los acordes siguientes para conectar la progresión."><Icon name="Info" size={10} className="text-amber-500/70 hover:text-amber-400 cursor-help" /></Tooltip>
                                                             </label>
                                                             <select value={linkStrategy} onChange={function(e){ setLinkStrategy(e.target.value); }} className="w-full bg-[#0f172a] border border-slate-700 p-3 rounded-xl text-emerald-400 font-bold focus:ring-2 ring-amber-500 outline-none transition-all">
                                                                 <option value="optimal">Voice Leading Óptimo (Busca el camino más corto / menor movimiento)</option>
@@ -1831,7 +1731,7 @@
                                                         </div>
                                                     )}
 
-                                                    <button type="button" onClick={function(){setSessionActive(true); setStudyProgressionStep(0); setTimeout(function(){if(optimalPathData && optimalPathData[0]) playVoicing(optimalPathData[0].fingering);}, 300);}} className="w-full md:w-auto px-10 py-4 rounded-xl font-black shadow-[0_0_20px_rgba(245,158,11,0.3)] transition-all flex justify-center items-center gap-3 bg-amber-500 text-slate-950 hover:bg-amber-400 hover:scale-[1.02] text-lg">
+                                                    <button onClick={function(){setSessionActive(true); setStudyProgressionStep(0); setTimeout(function(){if(optimalPathData && optimalPathData[0]) playVoicing(optimalPathData[0].fingering);}, 300);}} className="w-full md:w-auto px-10 py-4 rounded-xl font-black shadow-[0_0_20px_rgba(245,158,11,0.3)] transition-all flex justify-center items-center gap-3 bg-amber-500 text-slate-950 hover:bg-amber-400 hover:scale-[1.02] text-lg">
                                                         <Icon name="Play" size={20}/> Iniciar Práctica Guiada
                                                     </button>
                                                 </div>
@@ -1885,17 +1785,17 @@
                                                             </div>
                                                             <div className="flex gap-2 w-full md:w-auto shrink-0 mt-2 md:mt-0">
                                                                 {studyProgressionStep > 0 && !isPlaying && (
-                                                                    <button type="button" onClick={function(){ setStudyProgressionStep(studyProgressionStep - 1); if(optimalPathData[studyProgressionStep - 1]) playVoicing(optimalPathData[studyProgressionStep - 1].fingering); }} className="bg-slate-800 text-slate-300 px-4 py-3.5 rounded-xl font-bold hover:bg-slate-700 transition-all flex items-center shadow-md">
+                                                                    <button onClick={function(){ setStudyProgressionStep(studyProgressionStep - 1); if(optimalPathData[studyProgressionStep - 1]) playVoicing(optimalPathData[studyProgressionStep - 1].fingering); }} className="bg-slate-800 text-slate-300 px-4 py-3.5 rounded-xl font-bold hover:bg-slate-700 transition-all flex items-center shadow-md">
                                                                         <Icon name="ArrowLeft" size={16}/>
                                                                     </button>
                                                                 )}
                                                                 {studyProgressionStep < optimalPathData.length - 1 && !isPlaying && (
-                                                                    <button type="button" onClick={function(){ setStudyProgressionStep(studyProgressionStep + 1); if(optimalPathData[studyProgressionStep + 1]) playVoicing(optimalPathData[studyProgressionStep + 1].fingering); }} className="bg-slate-800 text-slate-300 px-4 py-3.5 rounded-xl font-bold hover:bg-slate-700 transition-all flex items-center shadow-md">
+                                                                    <button onClick={function(){ setStudyProgressionStep(studyProgressionStep + 1); if(optimalPathData[studyProgressionStep + 1]) playVoicing(optimalPathData[studyProgressionStep + 1].fingering); }} className="bg-slate-800 text-slate-300 px-4 py-3.5 rounded-xl font-bold hover:bg-slate-700 transition-all flex items-center shadow-md">
                                                                         <Icon name="ArrowRight" size={16}/>
                                                                     </button>
                                                                 )}
                                                                 {studyProgressionStep === optimalPathData.length - 1 && !isPlaying && (
-                                                                    <button type="button" onClick={handleNext} className="w-full md:w-auto bg-emerald-500 text-slate-950 px-6 py-3.5 rounded-xl font-black flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(16,185,129,0.3)] hover:bg-emerald-400 hover:scale-105 transition-all">
+                                                                    <button onClick={handleNext} className="w-full md:w-auto bg-emerald-500 text-slate-950 px-6 py-3.5 rounded-xl font-black flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(16,185,129,0.3)] hover:bg-emerald-400 hover:scale-105 transition-all">
                                                                         Siguiente Ejercicio <Icon name="Forward" size={16}/>
                                                                     </button>
                                                                 )}
@@ -1925,15 +1825,15 @@
                                                                 <span className="text-[10px] md:text-xs font-bold text-slate-300 uppercase tracking-widest">Repetir</span>
                                                                 <input type="number" value={repetitions} onChange={function(e){setRepetitions(Number(e.target.value));}} className="bg-slate-800 border border-slate-700 text-white w-14 md:w-16 p-1.5 rounded-lg text-center font-bold outline-none focus:ring-1 ring-amber-500" disabled={isPlaying} />
                                                             </div>
-                                                            <button type="button" onClick={toggleMetronome} className={"w-full md:w-auto ml-auto px-6 py-2.5 rounded-xl text-sm font-bold flex justify-center items-center gap-2 transition-all shadow-lg " + (isPlaying ? 'bg-rose-600 text-white hover:bg-rose-500' : 'bg-emerald-500 text-slate-950 hover:bg-emerald-400')}>
+                                                            <button onClick={toggleMetronome} className={"w-full md:w-auto ml-auto px-6 py-2.5 rounded-xl text-sm font-bold flex justify-center items-center gap-2 transition-all shadow-lg " + (isPlaying ? 'bg-rose-600 text-white hover:bg-rose-500' : 'bg-emerald-500 text-slate-950 hover:bg-emerald-400')}>
                                                                 {isPlaying ? <React.Fragment><Icon name="Play" size={14}/> Detener Práctica</React.Fragment> : <React.Fragment><Icon name="Play" size={14}/> Iniciar Metrónomo</React.Fragment>}
                                                             </button>
                                                         </div>
                                                         <div className="flex flex-wrap gap-3 mt-4 w-full md:w-auto">
-                                                            <button type="button" onClick={function(){setSessionActive(false); setIsPlaying(false);}} className="flex-1 md:flex-none justify-center text-slate-500 hover:text-amber-500 text-xs font-bold flex items-center gap-1 transition-colors bg-slate-800 p-2.5 rounded-lg border border-slate-700">
+                                                            <button onClick={function(){setSessionActive(false); setIsPlaying(false);}} className="flex-1 md:flex-none justify-center text-slate-500 hover:text-amber-500 text-xs font-bold flex items-center gap-1 transition-colors bg-slate-800 p-2.5 rounded-lg border border-slate-700">
                                                                 <Icon name="Layers" size={12}/> Volver a Configuración de Estudio
                                                             </button>
-                                                            <button type="button" onClick={downloadPDF} className="flex-1 md:flex-none justify-center text-slate-500 hover:text-emerald-500 text-xs font-bold flex items-center gap-1 transition-colors bg-slate-800 p-2.5 rounded-lg border border-slate-700">
+                                                            <button onClick={downloadPDF} className="flex-1 md:flex-none justify-center text-slate-500 hover:text-emerald-500 text-xs font-bold flex items-center gap-1 transition-colors bg-slate-800 p-2.5 rounded-lg border border-slate-700">
                                                                 <Icon name="Printer" size={12}/> Descargar PDF
                                                             </button>
                                                         </div>
@@ -1943,7 +1843,7 @@
                                                         {studyChords.map(function(c, i) {
                                                             const isActive = isPlaying ? activeChordIdx === i : studyProgressionStep === i;
                                                             return (
-                                                                <button type="button" id={"chord-step-" + i} key={i} onClick={function(){ if(!isPlaying) { setStudyProgressionStep(i); if (optimalPathData[i]) playVoicing(optimalPathData[i].fingering); } }} disabled={isPlaying} className={"flex-1 min-w-[100px] md:min-w-[120px] p-4 rounded-2xl border text-center transition-all duration-300 " + (isActive?'bg-amber-500 text-slate-950 border-amber-400 scale-[1.03] shadow-lg ':'border-slate-800 bg-slate-900/50 text-slate-400 cursor-pointer hover:border-amber-500/30 ')}>
+                                                                <button id={"chord-step-" + i} key={i} onClick={function(){ if(!isPlaying) { setStudyProgressionStep(i); if (optimalPathData[i]) playVoicing(optimalPathData[i].fingering); } }} disabled={isPlaying} className={"flex-1 min-w-[100px] md:min-w-[120px] p-4 rounded-2xl border text-center transition-all duration-300 " + (isActive?'bg-amber-500 text-slate-950 border-amber-400 scale-[1.03] shadow-lg ':'border-slate-800 bg-slate-900/50 text-slate-400 cursor-pointer hover:border-amber-500/30 ')}>
                                                                     <div className={"text-[10px] font-black uppercase tracking-widest mb-1 " + (isActive?'text-slate-800':'opacity-60')}>{c.label}</div>
                                                                     <div className="text-base md:text-xl font-black">{optimalPathData[i] ? optimalPathData[i].formattedChordName : c.root+c.quality}</div>
                                                                 </button>
@@ -1955,18 +1855,18 @@
                                                         <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mr-2 flex items-center gap-1">
                                                             <Icon name="Target" size={12}/> Nivel de dificultad:
                                                         </span>
-                                                        <button type="button" onClick={() => updateRating(currentlyActiveStepIdx, 'easy')} className={`px-4 py-1.5 rounded-xl text-xs font-bold transition-all border ${stepRatings[currentlyActiveStepIdx] === 'easy' ? 'bg-emerald-500 text-slate-900 border-emerald-400 scale-105' : 'bg-transparent text-emerald-500 border-emerald-500/30 hover:bg-emerald-500/10'}`}>Fácil</button>
-                                                        <button type="button" onClick={() => updateRating(currentlyActiveStepIdx, 'medium')} className={`px-4 py-1.5 rounded-xl text-xs font-bold transition-all border ${stepRatings[currentlyActiveStepIdx] === 'medium' ? 'bg-amber-500 text-slate-900 border-amber-400 scale-105' : 'bg-transparent text-amber-500 border-amber-500/30 hover:bg-amber-500/10'}`}>Medio</button>
-                                                        <button type="button" onClick={() => updateRating(currentlyActiveStepIdx, 'hard')} className={`px-4 py-1.5 rounded-xl text-xs font-bold transition-all border ${stepRatings[currentlyActiveStepIdx] === 'hard' ? 'bg-rose-500 text-slate-900 border-rose-400 scale-105' : 'bg-transparent text-rose-500 border-rose-500/30 hover:bg-rose-500/10'}`}>Difícil</button>
+                                                        <button onClick={() => updateRating(currentlyActiveStepIdx, 'easy')} className={`px-4 py-1.5 rounded-xl text-xs font-bold transition-all border ${stepRatings[currentlyActiveStepIdx] === 'easy' ? 'bg-emerald-500 text-slate-900 border-emerald-400 scale-105' : 'bg-transparent text-emerald-500 border-emerald-500/30 hover:bg-emerald-500/10'}`}>Fácil</button>
+                                                        <button onClick={() => updateRating(currentlyActiveStepIdx, 'medium')} className={`px-4 py-1.5 rounded-xl text-xs font-bold transition-all border ${stepRatings[currentlyActiveStepIdx] === 'medium' ? 'bg-amber-500 text-slate-900 border-amber-400 scale-105' : 'bg-transparent text-amber-500 border-amber-500/30 hover:bg-amber-500/10'}`}>Medio</button>
+                                                        <button onClick={() => updateRating(currentlyActiveStepIdx, 'hard')} className={`px-4 py-1.5 rounded-xl text-xs font-bold transition-all border ${stepRatings[currentlyActiveStepIdx] === 'hard' ? 'bg-rose-500 text-slate-900 border-rose-400 scale-105' : 'bg-transparent text-rose-500 border-rose-500/30 hover:bg-rose-500/10'}`}>Difícil</button>
                                                     </div>
 
-                                                    <div className="flex flex-wrap justify-center pb-12 gap-6 items-stretch print:grid-wrap">
+                                                    <div className="flex flex-wrap justify-center pb-12 gap-6 items-stretch">
                                                         {optimalPathData.map(function(o, i) {
                                                             const isSel = isPlaying ? activeChordIdx === i : studyProgressionStep === i;
                                                             let dropObj = null;
                                                             for (let j=0; j<activeDrops.length; j++) { if (activeDrops[j].id===o.drop) { dropObj=activeDrops[j]; break; } }
                                                             return (
-                                                                <div key={i} id={"fretboard-wrap-" + i} className={"w-full max-w-[280px] sm:max-w-[300px] shrink-0 print:w-auto print:max-w-none print:break-inside-avoid break-inside-avoid transition-all duration-500 " + (isSel ? 'opacity-100 scale-100' : 'opacity-30 scale-95')}>
+                                                                <div key={i} id={"fretboard-wrap-" + i} className={"w-full max-w-[280px] sm:max-w-[300px] shrink-0 print:max-w-[200px] print:break-inside-avoid break-inside-avoid transition-all duration-500 " + (isSel ? 'opacity-100 scale-100' : 'opacity-30 scale-95')}>
                                                                     <Fretboard {...o} dropLabel={dropObj?dropObj.short:''} degreeLabel={studyChords[i] ? studyChords[i].label : ''} options={{labelMode, leftHanded: false, blindMode, showGhostNotes, showScales, showRootOverlay, tensionNotation, notationMode, onPlayNote: playSingleNote}} vlRank={studyPhaseIdx !== undefined ? 1 : o.vlRank} distance={o.dist} isSelected={isSel} onSelect={function(){ if(!isPlaying){ setStudyProgressionStep(i); playVoicing(o.fingering); } }} onPlay={playVoicing} />
                                                                 </div>
                                                             );
@@ -1982,21 +1882,20 @@
                             </div>
                         )}
 
-                        {/* LAB LIBRE */}
                         {activeTab === 'free' && (
                             <div className="py-8">
                                 <div className="flex justify-center mb-8 print:hidden">
                                     <div className="bg-slate-900 p-1.5 rounded-xl flex w-full md:w-auto border border-slate-800 shadow-inner overflow-x-auto">
-                                        <button type="button" onClick={function(){setFreeModeTab('single');}} className={"flex-1 whitespace-nowrap px-6 py-2.5 rounded-lg text-sm font-bold transition-all " + (freeModeTab==='single'?'bg-amber-500 text-slate-950 shadow-md':'text-slate-400 hover:text-white')}>Diccionario</button>
-                                        <button type="button" onClick={function(){setFreeModeTab('builder'); setIsPlaying(false); setEditingIndex(null); setPendingOptions([]);}} className={"flex-1 whitespace-nowrap px-6 py-2.5 rounded-lg text-sm font-bold flex justify-center items-center gap-2 transition-all " + (freeModeTab==='builder'?'bg-amber-500 text-slate-950 shadow-md':'text-slate-400 hover:text-white')}><Icon name="Layers" size={14}/> Progresiones Dinámicas</button>
-                                        <button type="button" onClick={downloadPDF} className="flex-1 whitespace-nowrap px-4 py-2.5 rounded-lg text-sm font-bold bg-slate-800 text-white flex items-center justify-center gap-2 border border-slate-700 ml-2 hover:bg-slate-700 transition-colors"><Icon name="Printer" size={14}/> Descargar PDF</button>
+                                        <button onClick={function(){setFreeModeTab('single');}} className={"flex-1 whitespace-nowrap px-6 py-2.5 rounded-lg text-sm font-bold transition-all " + (freeModeTab==='single'?'bg-amber-500 text-slate-950 shadow-md':'text-slate-400 hover:text-white')}>Diccionario</button>
+                                        <button onClick={function(){setFreeModeTab('builder'); setIsPlaying(false); setEditingIndex(null); setPendingOptions([]);}} className={"flex-1 whitespace-nowrap px-6 py-2.5 rounded-lg text-sm font-bold flex justify-center items-center gap-2 transition-all " + (freeModeTab==='builder'?'bg-amber-500 text-slate-950 shadow-md':'text-slate-400 hover:text-white')}><Icon name="Layers" size={14}/> Progresiones Dinámicas</button>
+                                        <button onClick={downloadPDF} className="flex-1 whitespace-nowrap px-4 py-2.5 rounded-lg text-sm font-bold bg-slate-800 text-white flex items-center justify-center gap-2 border border-slate-700 ml-2 hover:bg-slate-700 transition-colors"><Icon name="Printer" size={14}/> Descargar PDF</button>
                                     </div>
                                 </div>
 
                                 {showCustomModal && (
                                     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm print:hidden">
                                         <div className="bg-slate-900 border border-slate-700 rounded-3xl p-6 md:p-8 max-w-4xl w-full max-h-[95vh] overflow-y-auto shadow-2xl relative animate-in zoom-in-95 flex flex-col md:flex-row gap-8">
-                                            <button type="button" onClick={function(){setShowCustomModal(false);}} className="absolute top-4 right-4 text-slate-400 hover:text-white transition-colors z-10"><Icon name="X" size={24}/></button>
+                                            <button onClick={function(){setShowCustomModal(false); setEditingIndex(null); setCustomNotes([]); setCustomName('');}} className="absolute top-4 right-4 text-slate-400 hover:text-white transition-colors z-10"><Icon name="X" size={24}/></button>
                                             
                                             <div className="flex-1 flex flex-col items-center">
                                                 <h3 className="text-xl font-bold text-amber-500 mb-2">Edición Libre (Motor Enarmónico)</h3>
@@ -2057,9 +1956,9 @@
 
                                                 <div className="mt-auto">
                                                     <button type="button" onClick={addCustomChordToBuilder} className="w-full bg-amber-500 text-slate-950 px-6 py-4 rounded-xl font-black shadow-[0_0_20px_rgba(245,158,11,0.3)] hover:bg-amber-400 hover:scale-[1.02] transition-all flex items-center justify-center gap-2">
-                                                        <Icon name="CheckCircle2" size={20}/> Guardar Posición
+                                                        <Icon name="CheckCircle2" size={20}/> Guardar Posición en Progresión
                                                     </button>
-                                                    <button type="button" onClick={()=>setShowCustomModal(false)} className="w-full mt-3 bg-slate-800 text-slate-300 px-6 py-3 rounded-xl font-bold hover:bg-slate-700 transition-colors">Cancelar</button>
+                                                    <button type="button" onClick={function(){setShowCustomModal(false); setEditingIndex(null); setCustomNotes([]); setCustomName('');}} className="w-full mt-3 bg-slate-800 text-slate-300 px-6 py-3 rounded-xl font-bold hover:bg-slate-700 transition-colors">Cancelar</button>
                                                 </div>
                                             </div>
                                         </div>
@@ -2075,14 +1974,11 @@
                                             </div>
                                             <div className="space-y-1.5">
                                                 <label className="text-[10px] uppercase font-bold text-slate-500 px-1 tracking-widest">Calidad</label>
-                                                <select value={freeQuality} onChange={function(e){setFreeQuality(e.target.value);}} className="w-full bg-[#0f172a] border border-slate-700 p-3.5 rounded-xl text-white font-bold focus:ring-2 ring-amber-500 outline-none transition-all">{activeQuals.map(function(q){return <option key={q.id} value={q.id}>{q.label}</option>;})}</select>
+                                                <select value={freeQuality} onChange={function(e){setFreeQuality(e.target.value);}} className="w-full bg-[#0f172a] border border-slate-700 p-3.5 rounded-xl text-white font-bold focus:ring-2 ring-amber-500 outline-none transition-all">{freeQuals.map(function(q){return <option key={q.id} value={q.id}>{q.label}</option>;})}</select>
                                             </div>
                                             <div className="space-y-1.5">
-                                                <label className="text-[10px] uppercase font-bold text-slate-500 px-1 tracking-widest flex items-center gap-1">
-                                                    Estructura
-                                                    <Tooltip text="Disposición interna de las voces (Drops). Modifica el espaciado para que se adapte mejor a la guitarra."><Icon name="Info" size={10} className="text-amber-500/70 hover:text-amber-400 cursor-help" /></Tooltip>
-                                                </label>
-                                                <select value={freeDrop} onChange={function(e){setFreeDrop(e.target.value);}} className="w-full bg-[#0f172a] border border-slate-700 p-3.5 rounded-xl text-white font-bold focus:ring-2 ring-amber-500 outline-none transition-all">{activeDrops.map(function(d){return <option key={d.id} value={d.id}>{d.label}</option>;})}</select>
+                                                <label className="text-[10px] uppercase font-bold text-slate-500 px-1 tracking-widest flex items-center gap-1">Estructura</label>
+                                                <select value={freeDrop} onChange={function(e){setFreeDrop(e.target.value);}} className="w-full bg-[#0f172a] border border-slate-700 p-3.5 rounded-xl text-white font-bold focus:ring-2 ring-amber-500 outline-none transition-all">{freeDrops.map(function(d){return <option key={d.id} value={d.id}>{d.label}</option>;})}</select>
                                             </div>
                                             <div className="space-y-1.5">
                                                 <label className="text-[10px] uppercase font-bold text-slate-500 px-1 tracking-widest">Cuerda Bajo</label>
@@ -2092,46 +1988,41 @@
                                         
                                         <div className="pdf-export-zone w-full relative">
                                             <PdfHeader title={`Diccionario: ${translateNote(freeRoot, notationMode)} ${freeQuality} (Estructura: ${freeDrop})`} />
-                                            
-                                            <div className="flex flex-wrap justify-center gap-6 pb-6 items-stretch print:grid-wrap">
+                                            <div className="flex flex-wrap justify-center gap-6 pb-6 items-stretch">
                                                 {freeData.length > 0 ? freeData.map(function(o, i) {
                                                     let dObj = null;
-                                                    for(let k=0; k<activeDrops.length; k++){ if(activeDrops[k].id===freeDrop){ dObj=activeDrops[k]; break; } }
-                                                    return <div key={i} className="w-full sm:w-[calc(50%-12px)] lg:w-[calc(25%-18px)] max-w-[280px] sm:max-w-[300px] print:w-auto print:max-w-none print:break-inside-avoid break-inside-avoid">
+                                                    for(let k=0; k<freeDrops.length; k++){ if(freeDrops[k].id===freeDrop){ dObj=freeDrops[k]; break; } }
+                                                    return <div key={i} className="w-full sm:w-[calc(50%-12px)] lg:w-[calc(25%-18px)] max-w-[280px] sm:max-w-[300px] print:w-auto print:max-w-[200px] print:break-inside-avoid break-inside-avoid">
                                                         <Fretboard {...o} options={{labelMode, leftHanded: false, blindMode, showGhostNotes, showScales, showRootOverlay, tensionNotation, notationMode, onPlayNote: playSingleNote}} dropLabel={dObj?dObj.short:""} onPlay={playVoicing} hideInteractive={false}/>
                                                     </div>;
                                                 }) : <div className="text-slate-500 font-bold py-10 w-full text-center">No hay configuraciones posibles sin cuerdas al aire en este set. Intenta con otra estructura u otra cuerda de bajo.</div>}
                                             </div>
-                                            
                                             <PdfFooter />
                                         </div>
                                     </div>
                                 ) : (
                                     <div className="space-y-8">
                                         <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 md:p-10 shadow-2xl print:border-none print:bg-transparent print:p-0 print:shadow-none">
+                                            
                                             <div className="flex justify-between items-center mb-6 print:hidden hide-on-pdf">
                                                 <h3 className="text-amber-500 font-black text-lg flex items-center gap-3"><Icon name="Layers" size={20}/> Constructor de Progresiones Dinámicas</h3>
                                                 {builderSeq.length > 0 && editingIndex === null && (
                                                     <div className="flex gap-2">
-                                                        <button type="button" onClick={saveCurrentProgression} className="text-slate-400 hover:text-emerald-500 flex items-center gap-1.5 text-xs font-bold transition-colors bg-slate-800 px-3 py-1.5 rounded-lg border border-slate-700">
-                                                            <Icon name="Save" size={14}/> Guardar
-                                                        </button>
-                                                        <button type="button" onClick={function(){setBuilderSeq([]); setIsPlaying(false); setPendingOptions([]);}} className="text-slate-400 hover:text-rose-500 flex items-center gap-1.5 text-xs font-bold transition-colors bg-slate-800 px-3 py-1.5 rounded-lg border border-slate-700">
-                                                            <Icon name="Trash2" size={14}/> Limpiar
-                                                        </button>
+                                                        <button type="button" onClick={saveCurrentProgression} className="text-slate-400 hover:text-emerald-500 flex items-center gap-1.5 text-xs font-bold transition-colors bg-slate-800 px-3 py-1.5 rounded-lg border border-slate-700"><Icon name="Save" size={14}/> Guardar</button>
+                                                        <button type="button" onClick={function(){setBuilderSeq([]); setIsPlaying(false); setPendingOptions([]);}} className="text-slate-400 hover:text-rose-500 flex items-center gap-1.5 text-xs font-bold transition-colors bg-slate-800 px-3 py-1.5 rounded-lg border border-slate-700"><Icon name="Trash2" size={14}/> Limpiar</button>
                                                     </div>
                                                 )}
                                             </div>
 
                                             <div className="bg-[#0f172a] border border-slate-700 p-4 md:p-6 rounded-2xl mb-8 print:hidden hide-on-pdf shadow-lg">
                                                 <h4 className="text-amber-500 font-bold mb-4 text-sm uppercase tracking-widest flex items-center gap-2">
-                                                    <Icon name="Plus" size={16}/> {editingIndex !== null ? `Reemplazar Acorde ${editingIndex + 1}` : "Añadir Siguiente Acorde"}
+                                                    <Icon name="Plus" size={16}/> Buscar Siguiente Acorde
                                                 </h4>
                                                 
                                                 <div className="grid grid-cols-2 md:grid-cols-5 gap-4 items-end">
                                                     <div className="space-y-1.5">
                                                         <label className="text-[10px] uppercase font-bold text-slate-500 px-1">Categoría</label>
-                                                        <select value={freeTrack} onChange={e=>{setFreeTrack(e.target.value); setPendingOptions([]);}} className="w-full bg-slate-900 border border-slate-700 p-3 rounded-xl text-white font-bold outline-none focus:ring-1 ring-amber-500">
+                                                        <select value={freeTrack} onChange={e=>setFreeTrack(e.target.value)} className="w-full bg-slate-900 border border-slate-700 p-3 rounded-xl text-white font-bold outline-none focus:ring-1 ring-amber-500">
                                                             <option value="triads">Tríadas</option>
                                                             <option value="quads">Cuatríadas / Drops</option>
                                                             <option value="shells">Shell Voicing</option>
@@ -2140,44 +2031,39 @@
                                                     </div>
                                                     <div className="space-y-1.5">
                                                         <label className="text-[10px] uppercase font-bold text-slate-500 px-1">Tónica</label>
-                                                        <select value={freeRoot} onChange={e=>{setFreeRoot(e.target.value); setPendingOptions([]);}} className="w-full bg-slate-900 border border-slate-700 p-3 rounded-xl text-white font-bold outline-none focus:ring-1 ring-amber-500">{DISPLAY_NOTES.map(n=><option key={n} value={n}>{translateNote(n, notationMode)}</option>)}</select>
+                                                        <select value={freeRoot} onChange={e=>setFreeRoot(e.target.value)} className="w-full bg-slate-900 border border-slate-700 p-3 rounded-xl text-white font-bold outline-none focus:ring-1 ring-amber-500">{DISPLAY_NOTES.map(n=><option key={n} value={n}>{translateNote(n, notationMode)}</option>)}</select>
                                                     </div>
                                                     <div className="space-y-1.5">
                                                         <label className="text-[10px] uppercase font-bold text-slate-500 px-1">Calidad</label>
-                                                        <select value={freeQuality} onChange={e=>{setFreeQuality(e.target.value); setPendingOptions([]);}} className="w-full bg-slate-900 border border-slate-700 p-3 rounded-xl text-white font-bold outline-none focus:ring-1 ring-amber-500">{freeQuals.map(q=><option key={q.id} value={q.id}>{q.label}</option>)}</select>
+                                                        <select value={freeQuality} onChange={e=>setFreeQuality(e.target.value)} className="w-full bg-slate-900 border border-slate-700 p-3 rounded-xl text-white font-bold outline-none focus:ring-1 ring-amber-500">{freeQuals.map(q=><option key={q.id} value={q.id}>{q.label}</option>)}</select>
                                                     </div>
                                                     <div className="space-y-1.5">
                                                         <label className="text-[10px] uppercase font-bold text-slate-500 px-1">Estructura</label>
-                                                        <select value={freeDrop} onChange={e=>{setFreeDrop(e.target.value); setPendingOptions([]);}} className="w-full bg-slate-900 border border-slate-700 p-3 rounded-xl text-white font-bold outline-none focus:ring-1 ring-amber-500">{freeDrops.map(d=><option key={d.id} value={d.id}>{d.label}</option>)}</select>
+                                                        <select value={freeDrop} onChange={e=>setFreeDrop(e.target.value)} className="w-full bg-slate-900 border border-slate-700 p-3 rounded-xl text-white font-bold outline-none focus:ring-1 ring-amber-500">{freeDrops.map(d=><option key={d.id} value={d.id}>{d.label}</option>)}</select>
                                                     </div>
                                                     <div className="space-y-1.5">
                                                         <label className="text-[10px] uppercase font-bold text-slate-500 px-1">Cuerda Bajo</label>
-                                                        <select value={freeBassString} onChange={e=>{setFreeBassString(Number(e.target.value)); setPendingOptions([]);}} className="w-full bg-slate-900 border border-slate-700 p-3 rounded-xl text-white font-bold outline-none focus:ring-1 ring-amber-500">{freeAvailableBassStrings.map(b => <option key={b} value={b}>Bajo en {b}ta</option>)}</select>
+                                                        <select value={freeBassString} onChange={e=>setFreeBassString(Number(e.target.value))} className="w-full bg-slate-900 border border-slate-700 p-3 rounded-xl text-white font-bold outline-none focus:ring-1 ring-amber-500">{freeAvailableBassStrings.map(b => <option key={b} value={b}>Bajo en {b}ta</option>)}</select>
                                                     </div>
                                                 </div>
 
                                                 <div className="flex flex-col md:flex-row gap-4 mt-6 border-t border-slate-800 pt-6">
-                                                    <button type="button" onClick={handleSearchOptions} className="flex-1 bg-amber-500 text-slate-950 px-6 py-3.5 rounded-xl font-black shadow-[0_0_15px_rgba(245,158,11,0.2)] hover:bg-amber-400 hover:scale-[1.01] transition-all flex items-center justify-center gap-2">
+                                                    <button type="button" onClick={function(){handleSearchOptions(false);}} className="flex-1 bg-amber-500 text-slate-950 px-6 py-3.5 rounded-xl font-black shadow-[0_0_15px_rgba(245,158,11,0.2)] hover:bg-amber-400 hover:scale-[1.01] transition-all flex items-center justify-center gap-2">
                                                         <Icon name="Search" size={18} /> {builderSeq.length === 0 ? "Buscar Posiciones Iniciales" : "Buscar Opciones (Voice Leading)"}
                                                     </button>
                                                     <button type="button" onClick={function(){ setCustomNotes([]); setCustomName(''); setShowCustomModal(true);}} className="md:w-auto bg-indigo-600 text-white px-6 py-3.5 rounded-xl font-bold shadow-[0_0_15px_rgba(79,70,229,0.2)] hover:bg-indigo-500 hover:scale-[1.01] transition-all flex items-center justify-center gap-2">
                                                         <Icon name="Edit2" size={18} /> Dibujar Acorde Libre
                                                     </button>
-                                                    {editingIndex !== null && (
-                                                        <button type="button" onClick={function(){setEditingIndex(null); setPendingOptions([]);}} className="bg-slate-800 text-white px-6 py-3.5 rounded-xl font-bold hover:bg-slate-700 transition-all">
-                                                            Cancelar Edición
-                                                        </button>
-                                                    )}
                                                 </div>
                                             </div>
 
                                             {pendingOptions.length > 0 && (
-                                                <div className="bg-slate-800/30 border border-amber-500/30 rounded-2xl p-6 mb-8 print:hidden hide-on-pdf animate-in slide-in-from-top-4 duration-500 shadow-inner">
+                                                <div className="bg-slate-800/30 border border-amber-500/30 rounded-2xl p-6 mb-8 print:hidden hide-on-pdf animate-in slide-in-from-top-4 duration-500 shadow-inner relative">
                                                     <div className="flex justify-between items-center mb-4">
                                                         <h4 className="text-amber-400 font-black text-sm uppercase tracking-widest flex items-center gap-2">
-                                                            <Icon name="Eye" size={18}/> Selecciona una Posición ({pendingOptions.length})
+                                                            <Icon name="Eye" size={18}/> SELECCIONA UNA POSICIÓN ({pendingOptions.length})
                                                         </h4>
-                                                        <button type="button" onClick={() => { setPendingOptions([]); if(editingIndex !== null) setEditingIndex(null); }} className="text-slate-400 hover:text-white bg-slate-800 p-1.5 rounded-lg"><Icon name="X" size={18}/></button>
+                                                        <button type="button" onClick={() => { setPendingOptions([]); if(editingIndex !== null) setEditingIndex(null); }} className="text-slate-400 hover:text-white bg-slate-800 p-1.5 rounded-lg transition-colors"><Icon name="X" size={18}/></button>
                                                     </div>
                                                     <p className="text-slate-400 text-xs mb-6">Haz clic en la opción deseada para integrarla a la progresión. Las opciones están ordenadas por su nivel de Voice Leading.</p>
                                                     <div className="flex flex-wrap justify-center gap-6">
@@ -2186,7 +2072,7 @@
                                                             return (
                                                                 <div key={idx} className="w-full sm:w-[calc(50%-12px)] lg:w-[calc(25%-18px)] max-w-[280px] sm:max-w-[300px] cursor-pointer hover:scale-105 transition-transform group" onClick={() => handleSelectPendingOption(o)}>
                                                                     <div className="absolute -inset-1 bg-gradient-to-r from-amber-500 to-amber-300 rounded-3xl opacity-0 group-hover:opacity-30 blur transition-all z-0"></div>
-                                                                    <Fretboard {...o} dropLabel={dropObj?dropObj.short:''} options={{labelMode, leftHanded: false, blindMode: false, showGhostNotes: true, showScales: false, showRootOverlay: false, tensionNotation, notationMode, onPlayNote: playSingleNote}} hideInteractive={true} onPlay={playVoicing} vlRank={builderSeq.length===0?0:o.vlRank} distance={o.dist} />
+                                                                    <Fretboard {...o} dropLabel={dropObj?dropObj.short:''} options={{labelMode, leftHanded: false, blindMode: false, showGhostNotes: true, showScales: false, showRootOverlay: false, tensionNotation, notationMode, onPlayNote: playSingleNote}} hideInteractive={true} onPlay={playVoicing} vlRank={builderSeq.length===0 && editingIndex===null ? 0 : o.vlRank} distance={o.dist} />
                                                                 </div>
                                                             )
                                                         })}
@@ -2195,9 +2081,9 @@
                                             )}
 
                                             {builderSeq.length === 0 ? (
-                                                <div>
+                                                <div className="pt-8 print:hidden hide-on-pdf">
                                                     {savedProgressions.length > 0 && (
-                                                        <div className="mt-12 pt-8 border-t border-slate-800 print:hidden hide-on-pdf">
+                                                        <div>
                                                             <h4 className="text-amber-500 font-bold mb-4 text-sm uppercase tracking-widest flex items-center gap-2 justify-center"><Icon name="Bookmark" size={16}/> Mis Progresiones Guardadas</h4>
                                                             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                                                                 {savedProgressions.map(function(prog) {
@@ -2207,9 +2093,7 @@
                                                                                 <div className="text-slate-200 font-bold text-sm truncate">{prog.name}</div>
                                                                                 <div className="text-slate-500 text-[10px]">{prog.seq.length} Acordes</div>
                                                                             </div>
-                                                                            <button type="button" onClick={function(){deleteProgression(prog.id);}} className="p-2 text-slate-500 hover:text-rose-500 hover:bg-rose-500/10 rounded-lg transition-colors ml-2">
-                                                                                <Icon name="Trash2" size={14}/>
-                                                                            </button>
+                                                                            <button type="button" onClick={function(){deleteProgression(prog.id);}} className="p-2 text-slate-500 hover:text-rose-500 hover:bg-rose-500/10 rounded-lg transition-colors ml-2"><Icon name="Trash2" size={14}/></button>
                                                                         </div>
                                                                     );
                                                                 })}
@@ -2230,10 +2114,7 @@
                                                         <div className="flex items-center justify-between gap-2 md:w-auto">
                                                             <span className="text-[10px] md:text-xs font-bold text-slate-300 uppercase tracking-widest">Compás</span>
                                                             <select value={beatsPerMeasure} onChange={function(e){setBeatsPerMeasure(Number(e.target.value));}} className="bg-slate-800 border border-slate-700 text-white p-1.5 rounded-lg outline-none focus:ring-1 ring-amber-500 text-sm" disabled={isPlaying}>
-                                                                <option value={2}>2/4</option>
-                                                                <option value={3}>3/4</option>
-                                                                <option value={4}>4/4</option>
-                                                                <option value={5}>5/4</option>
+                                                                <option value={2}>2/4</option><option value={3}>3/4</option><option value={4}>4/4</option><option value={5}>5/4</option>
                                                             </select>
                                                         </div>
                                                         <div className="flex items-center justify-between gap-2 md:w-auto">
@@ -2255,12 +2136,11 @@
                                                             return (
                                                                 <div key={idx} id={"chord-step-" + idx} className={"w-full max-w-[280px] sm:max-w-[300px] shrink-0 print:w-auto print:max-w-none print:break-inside-avoid break-inside-avoid transition-all " + (isEditingThis ? "ring-2 ring-amber-500 scale-105 rounded-2xl" : "")}>
                                                                     <div className={"text-center mb-2 font-black print:hidden hide-on-pdf " + (isSel || isEditingThis ? 'text-amber-500' : 'text-slate-500')}>Acorde {idx + 1}</div>
-                                                                    <Fretboard {...data} dropLabel={dropObj?dropObj.short:''} options={{labelMode, leftHanded: false, blindMode, showGhostNotes, showScales, showRootOverlay, tensionNotation, notationMode, isBuilder: true, onEdit: function() { handleEditInModal(data, idx); setPendingOptions([]); }, onDelete: function() { handleDeleteBuilderChord(idx); }, onPlayNote: playSingleNote}} vlRank={idx===0?0:data.vlRank} distance={data.dist} isSelected={isSel || isEditingThis} onPlay={playVoicing} hideInteractive={false} />
+                                                                    <Fretboard {...data} dropLabel={dropObj?dropObj.short:''} options={{labelMode, leftHanded: false, blindMode, showGhostNotes, showScales, showRootOverlay, tensionNotation, notationMode, isBuilder: true, onEdit: function() { handleEditChord(idx); setPendingOptions([]); }, onDelete: function() { handleDeleteBuilderChord(idx); }, onPlayNote: playSingleNote}} vlRank={idx===0?0:data.vlRank} distance={data.dist} isSelected={isSel || isEditingThis} onPlay={playVoicing} hideInteractive={false} />
                                                                 </div>
                                                             );
                                                         })}
                                                     </div>
-                                                    
                                                     <PdfFooter />
                                                 </div>
                                             )}
@@ -2270,7 +2150,6 @@
                             </div>
                         )}
                         
-                        {/* RECONOCEDOR INVERSO */}
                         {activeTab === 'reverse' && (
                             <div className="py-8 animate-in fade-in zoom-in-95 duration-500">
                                 <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 md:p-10 shadow-2xl relative max-w-5xl mx-auto">
@@ -2310,9 +2189,7 @@
                                                         {(() => {
                                                             const n = reverseNotes[0];
                                                             const pref = n.explicitEnharmonic || 'sharps';
-                                                            const namesArray = notationMode === 'latin'
-                                                                ? (pref === 'flats' ? MIDI_TO_NOTE_FLAT : MIDI_TO_NOTE_SHARP).map(k => translateNote(k, 'latin'))
-                                                                : (pref === 'flats' ? MIDI_TO_NOTE_FLAT : MIDI_TO_NOTE_SHARP);
+                                                            const namesArray = notationMode === 'latin' ? (pref === 'flats' ? MIDI_TO_NOTE_FLAT : MIDI_TO_NOTE_SHARP).map(k => translateNote(k, 'latin')) : (pref === 'flats' ? MIDI_TO_NOTE_FLAT : MIDI_TO_NOTE_SHARP);
                                                             return namesArray[n.note % 12];
                                                         })()}
                                                     </p>
@@ -2322,26 +2199,11 @@
                                                 <div className="flex flex-col items-center justify-center h-full text-sky-500 mt-10 animate-in fade-in zoom-in duration-300">
                                                     <Icon name="Layers" size={48} className="mb-4 drop-shadow-[0_0_15px_rgba(14,165,233,0.5)]" />
                                                     <h4 className="text-2xl font-black mb-2 uppercase tracking-widest">Intervalo Analizado</h4>
-                                                    <p className="text-3xl font-black text-slate-100 text-center">
-                                                        {(() => {
-                                                            const sorted = [...reverseNotes].sort((a,b) => a.note - b.note);
-                                                            const diff = sorted[1].note - sorted[0].note;
-                                                            const intervals = {
-                                                                0: 'Unísono', 1: '2da menor (b2)', 2: '2da Mayor (2)', 3: '3ra menor (b3)',
-                                                                4: '3ra Mayor (3)', 5: '4ta Justa (4)', 6: 'Tritono (b5/#4)', 7: '5ta Justa (5)',
-                                                                8: '6ta menor (b6)', 9: '6ta Mayor (6)', 10: '7ma menor (b7)', 11: '7ma Mayor (Maj7)',
-                                                                12: 'Octava Perfecta (8va)', 13: '9na menor (b9)', 14: '9na Mayor (9)', 15: '9na Aumentada (#9)',
-                                                                16: '10ma Mayor', 17: '11na Justa (11)', 18: '11na Aumentada (#11)', 19: '5ta Justa (8va arriba)',
-                                                                20: '13ra menor (b13)', 21: '13ra Mayor (13)', 22: '7ma menor (8va arriba)', 23: '7ma Mayor (8va arriba)',
-                                                                24: 'Doble Octava'
-                                                            };
-                                                            return intervals[diff] || `Distancia de ${diff} semitonos`;
-                                                        })()}
-                                                    </p>
+                                                    <p className="text-3xl font-black text-slate-100 text-center">{getIntervalName(reverseNotes)}</p>
                                                     <p className="text-slate-500 text-sm mt-4 font-bold">Añade una tercera nota para formar un acorde.</p>
                                                 </div>
                                             ) : detectedChords.length > 0 ? (
-                                                <div className="space-y-4">
+                                                <div className="space-y-4 max-h-[300px] overflow-y-auto pr-2">
                                                     {detectedChords.map(function(match, i) {
                                                         return (
                                                             <div key={i} className={"p-4 rounded-xl border flex justify-between items-center transition-all " + (i === 0 ? "bg-amber-500/10 border-amber-500/50 shadow-[0_0_15px_rgba(245,158,11,0.1)]" : "bg-slate-900 border-slate-700")}>
