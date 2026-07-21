@@ -29,7 +29,7 @@
         .glass-panel { background: rgba(15, 23, 42, 0.7); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.05); }
 
         .jpeg-is-exporting {
-            width: 1800px !important; 
+            width: 1800px !important;
             max-width: 1800px !important;
             min-width: 1800px !important;
             margin: 0 auto !important;
@@ -49,6 +49,18 @@
         .jpeg-is-exporting .print-grid-wrap > div {
             flex: 0 0 calc(25% - 50px) !important; 
             max-width: calc(25% - 50px) !important;
+        }
+
+        /* Utilidad infalible para el centrado absoluto en HTML2Canvas */
+        .perfect-center {
+            display: table;
+            width: 100%;
+            height: 100%;
+        }
+        .perfect-center > span {
+            display: table-cell;
+            vertical-align: middle;
+            text-align: center;
         }
     </style>
 </head>
@@ -95,6 +107,7 @@
                 CheckCircle: <g><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></g>,
                 Image: <g><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></g>,
                 Download: <g><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></g>,
+                Share2: <g><circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle><circle cx="18" cy="19" r="3"></circle><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line></g>,
                 UploadCloud: <g><polyline points="16 16 12 12 8 16"></polyline><line x1="12" y1="12" x2="12" y2="21"></line><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"></path><polyline points="16 16 12 12 8 16"></polyline></g>
             };
             return (
@@ -164,14 +177,14 @@
                             {config.type === 'alert' ? <Icon name="AlertCircle" size={24}/> : config.type === 'confirm' ? <Icon name="Info" size={24}/> : <Icon name="Edit2" size={24}/>}
                             {config.type === 'alert' ? 'Aviso' : config.type === 'confirm' ? 'Confirmación' : 'Entrada Requerida'}
                         </h3>
-                        <p className="text-slate-300 mb-6">{config.message}</p>
+                        <p className="text-slate-300 mb-6 whitespace-pre-wrap">{config.message}</p>
                         
                         {config.type === 'prompt' && (
-                            <input 
-                                type="text" 
-                                className="w-full bg-[#0f172a] border border-slate-700 p-3 rounded-xl text-white font-bold focus:ring-2 ring-amber-500 outline-none transition-all mb-6"
+                            <textarea 
+                                className="w-full bg-[#0f172a] border border-slate-700 p-3 rounded-xl text-white font-bold focus:ring-2 ring-amber-500 outline-none transition-all mb-6 min-h-[100px] resize-none"
                                 value={inputValue}
                                 onChange={function(e) { setInputValue(e.target.value); }}
+                                placeholder="Escribe o pega aquí..."
                                 autoFocus
                             />
                         )}
@@ -239,7 +252,6 @@
         const MIDI_TO_NOTE_SHARP = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
         const MIDI_TO_NOTE_FLAT = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B'];
         const DISPLAY_NOTES = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'Ab', 'A', 'Bb', 'B'];
-
         const LATIN_MAP = { 'C':'Do', 'C#':'Do#', 'Db':'Reb', 'D':'Re', 'D#':'Re#', 'Eb':'Mib', 'E':'Mi', 'F':'Fa', 'F#':'Fa#', 'Gb':'Solb', 'G':'Sol', 'G#':'Sol#', 'Ab':'Lab', 'A':'La', 'A#':'La#', 'Bb':'Sib', 'B':'Si' };
         
         const translateNote = function(noteStr, mode) {
@@ -247,39 +259,6 @@
             let base = noteStr.replace('m', '');
             let isMinor = noteStr.includes('m');
             return (LATIN_MAP[base] || base) + (isMinor ? 'm' : '');
-        };
-
-        const getSpelledNote = function(rootMidi, rootName, intervalMidi, explicitEnharmonic) {
-            if (explicitEnharmonic === 'sharps') return MIDI_TO_NOTE_SHARP[intervalMidi];
-            if (explicitEnharmonic === 'flats') return MIDI_TO_NOTE_FLAT[intervalMidi];
-            
-            const noteNames = ['C', 'D', 'E', 'F', 'G', 'A', 'B'];
-            const rootLetter = rootName.replace(/[^A-G]/g, '');
-            const rootIdx = noteNames.indexOf(rootLetter);
-            if (rootIdx === -1) return MIDI_TO_NOTE_SHARP[intervalMidi];
-
-            const diff = (intervalMidi - rootMidi + 12) % 12;
-            let targetDegree = 0;
-            
-            if (diff === 0) targetDegree = 0; // 1
-            else if (diff === 1 || diff === 2) targetDegree = 1; // 2, b2, #2
-            else if (diff === 3 || diff === 4) targetDegree = 2; // 3, b3
-            else if (diff === 5 || diff === 6) targetDegree = 3; // 4, #4, b5
-            else if (diff === 7) targetDegree = 4; // 5
-            else if (diff === 8 || diff === 9) targetDegree = 5; // 6, b6, #5
-            else if (diff === 10 || diff === 11) targetDegree = 6; // 7, b7
-
-            if (diff === 6 && (rootName.includes('b') || rootName === 'F')) targetDegree = 4; // b5 preferido sobre #4 en tonos bemoles
-
-            const targetLetter = noteNames[(rootIdx + targetDegree) % 7];
-            
-            const sharpOption = MIDI_TO_NOTE_SHARP[intervalMidi];
-            const flatOption = MIDI_TO_NOTE_FLAT[intervalMidi];
-            
-            if (sharpOption.startsWith(targetLetter)) return sharpOption;
-            if (flatOption.startsWith(targetLetter)) return flatOption;
-            
-            return flatOption.includes('b') ? flatOption : sharpOption;
         };
 
         const getBassNoteName = function(rootName, quality, intervalMidi, contextKey) {
@@ -361,7 +340,7 @@
             { id: 'm7', label: 'm7', intervals: [0, 3, 7, 10] },
             { id: 'm7b5', label: 'm7b5', intervals: [0, 3, 6, 10] },
             { id: 'dim7', label: 'dim7', intervals: [0, 3, 6, 9] },
-            { id: 'mM7', label: 'm(Maj7)', intervals: [0, 3, 7, 11] },
+            { id: 'mMaj7', label: 'm(Maj7)', intervals: [0, 3, 7, 11] },
             { id: '7sus4', label: '7sus4', intervals: [0, 5, 7, 10] },
             { id: '6', label: '6', intervals: [0, 4, 7, 9] },
             { id: 'm6', label: 'm6', intervals: [0, 3, 7, 9] },
@@ -387,13 +366,15 @@
             { id: 'maj9_rl', label: 'Maj9(13) (RL)', stacks: [[4, 11, 14, 21], [11, 16, 21, 26]], names: ['3-7-9-13', '7-3-13-9'] }, 
             { id: '9_rl', label: '13(9) (RL)', stacks: [[4, 10, 14, 21], [10, 16, 21, 26]], names: ['3-b7-9-13', 'b7-3-13-9'] }, 
             { id: 'm9_rl', label: 'm9(11) (RL)', stacks: [[3, 10, 14, 17], [10, 15, 17, 26]], names: ['b3-b7-9-11', 'b7-b3-11-9'] }, 
-            { id: 'maj13', label: 'Maj13', stacks: [[0, 4, 11, 21], [0, 11, 16, 21]], names: ['1-3-7-13', '1-7-3-13'] },
-            { id: '9', label: '9', stacks: [[0, 4, 10, 14], [0, 10, 16, 26]], names: ['1-3-b7-9', '1-b7-3-9'] },
-            { id: '7#9', label: '7(#9)', stacks: [[0, 4, 10, 15], [0, 10, 16, 27]], names: ['1-3-b7-#9', '1-b7-3-#9'] },
-            { id: '9sus4', label: '9sus4', stacks: [[0, 5, 10, 14], [0, 10, 17, 26]], names: ['1-4-b7-9', '1-b7-4-9'] },
-            { id: '13sus4', label: '13sus4', stacks: [[0, 5, 10, 21], [0, 10, 17, 21]], names: ['1-4-b7-13', '1-b7-4-13'] },
+            { id: 'maj13', label: 'Maj13', stacks: [[0, 4, 11, 21]], names: ['1-3-7-13'] },
+            { id: '9', label: '9', stacks: [[0, 4, 10, 14]], names: ['1-3-b7-9'] },
+            { id: '7#9', label: '7(#9)', stacks: [[0, 4, 10, 15]], names: ['1-3-b7-#9'] },
+            { id: '9sus4', label: '9sus4', stacks: [[0, 5, 10, 14]], names: ['1-4-b7-9'] },
+            { id: '13sus4', label: '13sus4', stacks: [[0, 5, 10, 21]], names: ['1-4-b7-13'] }
         ];
 
+        const getQualsForTrack = function(t) { return t === 'triads' ? TRIAD_QUALITIES : t === 'shells' ? SHELL_QUALITIES : t === 'tensions' ? TENSION_QUALITIES : QUAD_QUALITIES; };
+        
         const TRIAD_VOICINGS = [
             { id: 'closed', label: 'Cerrada', short: 'Cerr' },
             { id: 'open', label: 'Abierta', short: 'Abie' }
@@ -409,8 +390,7 @@
 
         const SHELL_VOICINGS = [ { id: 'fixed', label: 'Disposición Fija', short: 'Fija' } ];
         const TENSION_VOICINGS = [ { id: 'fixed', label: 'Disposición Fija', short: 'Fija' } ];
-
-        const getQualsForTrack = function(t) { return t === 'triads' ? TRIAD_QUALITIES : t === 'shells' ? SHELL_QUALITIES : t === 'tensions' ? TENSION_QUALITIES : QUAD_QUALITIES; };
+        
         const getDropsForTrack = function(t) { return t === 'triads' ? TRIAD_VOICINGS : t === 'shells' ? SHELL_VOICINGS : t === 'tensions' ? TENSION_VOICINGS : QUAD_VOICINGS; };
 
         const STUDY_KEYS = ['C', 'F', 'Bb', 'Eb']; 
@@ -586,32 +566,25 @@
         const getIntervalDegree = function(noteMidi, rootMidi, quality, explicitEnharmonic) {
             const diff = (noteMidi - rootMidi + 120) % 12;
             if (diff === 0) return '1';
-            if (diff === 1) return explicitEnharmonic === 'sharps' ? '#1' : 'b9';
-            if (diff === 2) return explicitEnharmonic === 'sharps' ? '#2' : '9';
-            if (diff === 3) {
-                if (explicitEnharmonic === 'sharps') return '#9';
-                if (quality && (quality.indexOf('alt') !== -1 || quality.indexOf('#9') !== -1)) return '#9';
-                return 'b3';
-            }
-            if (diff === 4) return explicitEnharmonic === 'flats' ? 'b4' : '3';
+            if (diff === 1) return 'b9';
+            if (diff === 2) return '9';
+            if (diff === 3) return (explicitEnharmonic === 'sharps') ? '#9' : 'b3';
+            if (diff === 4) return '3';
             if (diff === 5) return '11';
             if (diff === 6) {
                 if (explicitEnharmonic === 'flats') return 'b5';
                 if (explicitEnharmonic === 'sharps') return '#11';
-                return (quality && (quality.indexOf('alt') !== -1 || quality.indexOf('b5') !== -1)) ? 'b5' : '#11';
+                return (quality && quality.toLowerCase().indexOf('alt') !== -1) ? '#11' : 
+                       (quality && (quality.indexOf('m7b5') !== -1 || quality.indexOf('dim') !== -1 || quality.indexOf('7b5') !== -1)) ? 'b5' : '#11';
             }
             if (diff === 7) return '5';
             if (diff === 8) {
                 if (explicitEnharmonic === 'flats') return 'b13';
                 if (explicitEnharmonic === 'sharps') return '#5';
-                return (quality && (quality.indexOf('alt') !== -1 || quality.indexOf('b13') !== -1)) ? 'b13' : '#5';
+                return (quality && quality.toLowerCase().indexOf('alt') !== -1) ? 'b13' : 
+                       (quality && (quality.indexOf('aug') !== -1 || quality.indexOf('#5') !== -1)) ? '#5' : 'b13';
             }
-            if (diff === 9) {
-                if (explicitEnharmonic === 'sharps') return '#6';
-                if (quality && quality.indexOf('dim') !== -1) return 'bb7';
-                if (quality && quality.indexOf('13') !== -1) return '13';
-                return '6';
-            }
+            if (diff === 9) return (quality && quality.indexOf('dim') !== -1) ? 'bb7' : (quality && (quality.indexOf('13') !== -1 || quality.indexOf('6') !== -1) ? '13' : '6');
             if (diff === 10) return 'b7';
             if (diff === 11) return '7';
             return '?';
@@ -702,12 +675,15 @@
             let matches = [];
 
             const dict = [
+                // Triads & Basic
                 { id: 'Maj', name: '', intervals: [0,4,7], score: 10 },
                 { id: 'm', name: 'm', intervals: [0,3,7], score: 10 },
                 { id: 'dim', name: 'dim', intervals: [0,3,6], score: 9 },
                 { id: 'aug', name: 'aug', intervals: [0,4,8], score: 9 },
                 { id: 'sus2', name: 'sus2', intervals: [0,2,7], score: 8 },
                 { id: 'sus4', name: 'sus4', intervals: [0,5,7], score: 8 },
+                
+                // 7ths
                 { id: 'Maj7', name: 'Maj7', intervals: [0,4,7,11], score: 12 },
                 { id: 'm7', name: 'm7', intervals: [0,3,7,10], score: 12 },
                 { id: '7', name: '7', intervals: [0,4,7,10], score: 12 },
@@ -720,22 +696,31 @@
                 { id: 'Maj7#5', name: 'Maj7(#5)', intervals: [0,4,8,11], score: 11 },
                 { id: '7#5', name: '7(#5)', intervals: [0,4,8,10], score: 11 },
                 { id: '7b5', name: '7(b5)', intervals: [0,4,6,10], score: 11 },
+                
+                // 9ths & 6/9
                 { id: 'add9', name: 'add9', intervals: [0,2,4,7], score: 9 },
                 { id: 'madd9', name: 'm(add9)', intervals: [0,2,3,7], score: 9 },
-                { id: '6/9', name: '6/9', intervals: [0,2,4,7,9], score: 11 },
+                { id: '6/9', name: '6/9', intervals: [0,2,4,7,9], score: 12 },
+                { id: 'm6/9', name: 'm6/9', intervals: [0,2,3,7,9], score: 12 },
                 { id: 'Maj9', name: 'Maj9', intervals: [0,2,4,7,11], score: 14 },
                 { id: 'm9', name: 'm9', intervals: [0,2,3,7,10], score: 14 },
                 { id: '9', name: '9', intervals: [0,2,4,7,10], score: 14 },
                 { id: 'mM9', name: 'm(Maj9)', intervals: [0,2,3,7,11], score: 13 },
+                { id: '9sus4', name: '9sus4', intervals: [0,2,5,7,10], score: 13 },
+                
+                // Alt 9ths
                 { id: '7b9', name: '7(b9)', intervals: [0,1,4,7,10], score: 13 },
                 { id: '7#9', name: '7(#9)', intervals: [0,3,4,7,10], score: 13 },
                 { id: 'm7b9', name: 'm7(b9)', intervals: [0,1,3,7,10], score: 12 },
+                { id: 'Maj9#5', name: 'Maj9(#5)', intervals: [0,2,4,8,11], score: 14 },
                 { id: '9#5', name: '9(#5)', intervals: [0,2,4,8,10], score: 13 },
                 { id: '9b5', name: '9(b5)', intervals: [0,2,4,6,10], score: 13 },
                 { id: '7#5b9', name: '7(#5,b9)', intervals: [0,1,4,8,10], score: 14 },
                 { id: '7#5#9', name: '7(#5,#9)', intervals: [0,3,4,8,10], score: 14 },
                 { id: '7b5b9', name: '7(b5,b9)', intervals: [0,1,4,6,10], score: 14 },
                 { id: '7b5#9', name: '7(b5,#9)', intervals: [0,3,4,6,10], score: 14 },
+                
+                // 11ths
                 { id: '11', name: '11', intervals: [0,2,4,5,7,10], score: 15 },
                 { id: 'm11', name: 'm11', intervals: [0,2,3,5,7,10], score: 15 },
                 { id: 'Maj11', name: 'Maj11', intervals: [0,2,4,5,7,11], score: 15 },
@@ -745,8 +730,10 @@
                 { id: '7#11', name: '7(#11)', intervals: [0,4,6,7,10], score: 13 },
                 { id: '9#11', name: '9(#11)', intervals: [0,2,4,6,7,10], score: 14 },
                 { id: 'Maj9#11', name: 'Maj9(#11)', intervals: [0,2,4,6,7,11], score: 14 },
+                { id: '6/9#11', name: '6/9(#11)', intervals: [0,2,4,6,7,9], score: 15 },
+                { id: 'm6/9#11', name: 'm6/9(#11)', intervals: [0,2,3,6,7,9], score: 15 },
                 
-                // Familia de las 13nas y variaciones (ahora adaptadas a la guitarra real omitiendo 11nas por defecto)
+                // 13ths
                 { id: '13', name: '13', intervals: [0,2,4,7,9,10], score: 16 },
                 { id: 'Maj13', name: 'Maj13', intervals: [0,2,4,7,9,11], score: 16 },
                 { id: 'm13', name: 'm13', intervals: [0,2,3,7,9,10], score: 16 },
@@ -754,39 +741,50 @@
                 { id: 'Maj13#11', name: 'Maj13(#11)', intervals: [0,2,4,6,7,9,11], score: 17 },
                 { id: '13b9', name: '13(b9)', intervals: [0,1,4,7,9,10], score: 16 },
                 { id: '13#9', name: '13(#9)', intervals: [0,3,4,7,9,10], score: 16 },
-                { id: '9sus4', name: '9sus4', intervals: [0,2,5,7,10], score: 14 },
-                { id: '9sus4(no5)', name: '9sus4', intervals: [0,2,5,10], score: 13 },
                 { id: '13sus4', name: '13sus4', intervals: [0,2,5,7,9,10], score: 15 },
-                { id: '13sus4(no5)', name: '13sus4', intervals: [0,2,5,9,10], score: 14 },
-                { id: '7sus2', name: '7sus2', intervals: [0,2,7,10], score: 12 },
                 
-                // Familia Sin 5ta (no5) y variantes de color super comunes en guitarra jazz
+                // --- MEGA-EXPANSIÓN: ACORDES OMITIDOS (no5, no9) CRUCIALES EN GUITARRA ---
+                
+                // Familia no5
                 { id: 'Maj7_no5', name: 'Maj7', intervals: [0,4,11], score: 10 },
                 { id: '7_no5', name: '7', intervals: [0,4,10], score: 10 },
                 { id: 'm7_no5', name: 'm7', intervals: [0,3,10], score: 10 },
                 { id: 'mM7_no5', name: 'm(Maj7)', intervals: [0,3,11], score: 10 },
-                { id: '13_no5', name: '13', intervals: [0,4,9,10], score: 14 },
-                { id: 'Maj13_no5', name: 'Maj13', intervals: [0,4,9,11], score: 14 },
-                { id: 'm13_no5', name: 'm13', intervals: [0,3,9,10], score: 14 },
                 { id: '9_no5', name: '9', intervals: [0,2,4,10], score: 13 },
                 { id: 'Maj9_no5', name: 'Maj9', intervals: [0,2,4,11], score: 13 },
                 { id: 'm9_no5', name: 'm9', intervals: [0,2,3,10], score: 13 },
                 { id: '7#9_no5', name: '7(#9)', intervals: [0,3,4,10], score: 13 },
                 { id: '7b9_no5', name: '7(b9)', intervals: [0,1,4,10], score: 13 },
-                { id: 'm11_no5', name: 'm11', intervals: [0,3,5,10], score: 14 },
+                { id: '13_no5', name: '13', intervals: [0,4,9,10], score: 14 },
+                { id: 'Maj13_no5', name: 'Maj13', intervals: [0,4,9,11], score: 14 },
+                { id: 'm13_no5', name: 'm13', intervals: [0,3,9,10], score: 14 },
+                { id: 'm11_no5', name: 'm11', intervals: [0,3,5,10], score: 14 }, // m7 add 11
+                { id: '11_no5', name: '11', intervals: [0,4,5,10], score: 14 }, // 7 add 11
+                { id: '6/9_no5', name: '6/9', intervals: [0,2,4,9], score: 12 },
+                { id: 'm6/9_no5', name: 'm6/9', intervals: [0,2,3,9], score: 12 },
+                { id: '6/9#11_no5', name: '6/9(#11)', intervals: [0,2,4,6,9], score: 13 },
                 { id: 'Maj7#5_no3', name: 'Maj7(#5)', intervals: [0,8,11], score: 10 },
                 { id: '7#5_no3', name: '7(#5)', intervals: [0,8,10], score: 10 },
-                { id: 'Maj9#5', name: 'Maj9(#5)', intervals: [0,2,4,8,11], score: 14 },
-                { id: 'add9_no5', name: 'add9', intervals: [0,2,4], score: 9 },
-                { id: 'madd9_no5', name: 'm(add9)', intervals: [0,2,3], score: 9 },
+                { id: 'add9_no5', name: 'add9', intervals: [0,2,4], score: 8 },
+                { id: 'madd9_no5', name: 'm(add9)', intervals: [0,2,3], score: 8 },
                 
-                // Variaciones complejas 6/9 y #11
-                { id: '6/9#11', name: '6/9(#11)', intervals: [0,2,4,6,7,9], score: 16 },
-                { id: '6/9#11_no5', name: '6/9(#11)', intervals: [0,2,4,6,9], score: 15 },
-                { id: 'm6/9', name: 'm6/9', intervals: [0,2,3,7,9], score: 14 },
-                { id: 'm6/9_no5', name: 'm6/9', intervals: [0,2,3,9], score: 13 },
-                { id: 'm6/9#11', name: 'm6/9(#11)', intervals: [0,2,3,6,7,9], score: 16 },
-                { id: 'add9#11', name: 'add9(#11)', intervals: [0,2,4,6,7], score: 12 }
+                // Familia no9 (Para Em11, G13, etc que omiten la 9na)
+                { id: 'm11_no9', name: 'm11', intervals: [0,3,5,7,10], score: 14 }, // <-- ¡Resuelve D13 con bajo A que da Em11!
+                { id: '11_no9', name: '11', intervals: [0,4,5,7,10], score: 14 },
+                { id: 'Maj11_no9', name: 'Maj11', intervals: [0,4,5,7,11], score: 14 },
+                { id: '13_no9', name: '13', intervals: [0,4,7,9,10], score: 15 },
+                { id: 'Maj13_no9', name: 'Maj13', intervals: [0,4,7,9,11], score: 15 },
+                { id: 'm13_no9', name: 'm13', intervals: [0,3,7,9,10], score: 15 },
+                { id: '13sus4_no9', name: '13sus4', intervals: [0,5,7,9,10], score: 14 },
+                { id: '13b9_no5', name: '13(b9)', intervals: [0,1,4,9,10], score: 15 },
+                { id: '13#9_no5', name: '13(#9)', intervals: [0,3,4,9,10], score: 15 },
+                { id: 'm11b13', name: 'm11(b13)', intervals: [0,3,5,8,10], score: 14 },
+                
+                // Suspensiones parciales
+                { id: '7sus2', name: '7sus2', intervals: [0,2,7,10], score: 11 },
+                { id: '9sus4(no5)', name: '9sus4', intervals: [0,2,5,10], score: 12 },
+                { id: '13sus4(no5)', name: '13sus4', intervals: [0,2,5,9,10], score: 14 },
+                { id: '6/9sus4', name: '6/9sus4', intervals: [0,2,5,7,9], score: 12 }
             ];
 
             const getNoteName = (pc, isRoot) => {
@@ -815,7 +813,7 @@
                         let finalScore = def.score + (bassPC === rootPC ? 5 : 0);
                         let finalDefName = def.name;
                         
-                        // Traducción dinámica de cifrado basado en la intención de la nota
+                        // Traducción dinámica de cifrado basado en la intención de la nota (b13 vs #5 etc)
                         const int8 = notes.find(n => (n.note - rootPC + 120) % 12 === 8);
                         if (int8 && int8.explicitEnharmonic === 'flats' && finalDefName.includes('#5')) {
                             finalDefName = finalDefName.replace('#5', 'b13');
@@ -838,7 +836,7 @@
                 });
             });
 
-            // 2. PASO POLIACORDES (Slash Chords)
+            // 2. PASO POLIACORDES (Slash Chords) - Expansión a 6tas y disminuidos
             const bassPC = bassMidi % 12;
             const upperNotes = notes.filter(n => n.note % 12 !== bassPC);
             if (upperNotes.length >= 2) {
@@ -846,7 +844,7 @@
                 upperPCs.forEach(upperRootPC => {
                     let intervals = upperPCs.map(pc => (pc - upperRootPC + 12) % 12).sort((a,b)=>a-b);
                     dict.forEach(def => {
-                        if (['Maj', 'm', 'Maj7', 'm7'].includes(def.id)) {
+                        if (['Maj', 'm', 'dim', 'aug', 'Maj7', 'm7', '7', 'm7b5', '6', 'm6', 'sus2', 'sus4'].includes(def.id)) {
                             if (intervals.length === def.intervals.length && intervals.every((v,i)=>v===def.intervals[i])) {
                                 const upperRootName = getNoteName(upperRootPC, true);
                                 const bassName = getNoteName(bassPC, false);
@@ -857,6 +855,7 @@
                                 if (diff === 10 && def.id === 'Maj7') susEquivalent = '13sus4'; 
                                 if (diff === 7 && def.id === 'm') susEquivalent = '7sus4'; 
                                 if (diff === 7 && def.id === 'm7') susEquivalent = '9sus4'; 
+                                if (diff === 7 && def.id === 'sus4') susEquivalent = '9sus4'; 
                                 
                                 let finalName = upperRootName + def.name + '/' + bassName;
                                 let qName = susEquivalent ? `Pol. (${susEquivalent})` : `Poliacorde`;
@@ -895,7 +894,7 @@
         };
 
         const FretboardSVG = function(props) {
-            const { fingering, prevFingering, degreeLabel, name, rootMidi, formattedChordName, quality, dropLabel, options, vlRank, isSelected, isLocked, onSelect, onPlay, hideInteractive, distance, queryRoot } = props;
+            const { fingering, prevFingering, degreeLabel, name, rootMidi, formattedChordName, quality, dropLabel, options, vlRank, isSelected, isLocked, onSelect, onPlay, hideInteractive, distance } = props;
             const [isRevealed, setIsRevealed] = useState(false);
             
             useEffect(function() { setIsRevealed(false); }, [fingering, options.blindMode]);
@@ -906,9 +905,8 @@
             const numFrets = Math.max(5, endFret - startFret + 1); 
             
             const stringsArray = options.leftHanded ? [0, 1, 2, 3, 4, 5] : [5, 4, 3, 2, 1, 0];
-            const fretsArray = [];
-            for(let i=0; i<=numFrets; i++) fretsArray.push(i);
-            
+            const isBlind = options.blindMode && !isRevealed;
+
             let rankStyle = "", rankText = "";
             if (vlRank === 1) { rankStyle = "bg-emerald-500 text-slate-900 border-emerald-500"; rankText = "Óptimo"; }
             else if (vlRank === 2) { rankStyle = "bg-amber-500 text-slate-900 border-amber-500"; rankText = "Aceptable"; }
@@ -933,39 +931,22 @@
                 node.style.transform = 'none';
 
                 const hideEls = node.querySelectorAll('.hide-on-pdf');
-                hideEls.forEach(el => {
-                    el.dataset.oldDisplay = el.style.display;
-                    el.style.display = 'none';
-                });
+                hideEls.forEach(el => { el.dataset.oldDisplay = el.style.display; el.style.display = 'none'; });
 
-                window.html2canvas(node, {
-                    scale: 3,
-                    backgroundColor: '#0f172a',
-                    logging: false
-                }).then(canvas => {
-                    node.style.backgroundColor = originalBg;
-                    node.style.border = originalBorder;
-                    node.style.transform = originalTransform;
-                    hideEls.forEach(el => {
-                        el.style.display = el.dataset.oldDisplay || '';
-                    });
-
+                window.html2canvas(node, { scale: 3, backgroundColor: '#0f172a', logging: false }).then(canvas => {
+                    node.style.backgroundColor = originalBg; node.style.border = originalBorder; node.style.transform = originalTransform;
+                    hideEls.forEach(el => { el.style.display = el.dataset.oldDisplay || ''; });
                     const imgData = canvas.toDataURL('image/jpeg', 1.0);
                     const link = document.createElement('a');
                     link.download = `Acorde_${formattedChordName ? formattedChordName.replace(/\//g, '-') : 'Diagrama'}.jpg`;
-                    link.href = imgData;
-                    link.click();
+                    link.href = imgData; link.click();
                 });
             };
 
-            const isBlind = options.blindMode && !isRevealed;
-
-            // SVG Dimensions setup
-            const fretHeight = 40;
-            const stringSpacing = 30;
-            const svgWidth = 150; // 5 strings * 30
-            const svgHeight = numFrets * fretHeight;
-            const effectiveRoot = props.queryRoot || options.fallbackRootName || 'C';
+            const gridWidth = 140;
+            const fretHeight = 32; 
+            const totalHeight = numFrets * fretHeight;
+            const stringSpacing = gridWidth / 5;
 
             return (
                 <div onClick={!isLocked ? onSelect : undefined} id={props.id} className={"bg-slate-900 p-4 sm:p-5 rounded-2xl border transition-all duration-300 min-w-[240px] w-full max-w-[280px] sm:max-w-[300px] shrink-0 shadow-lg relative flex flex-col print:border-none print:shadow-none print:bg-transparent " + (!hideInteractive && !isLocked && onSelect ? 'cursor-pointer hover:border-amber-500/50 hover:shadow-amber-500/10 group ' : '') + (isSelected ? 'border-amber-500 ring-2 ring-amber-500/30 bg-slate-800 transform scale-[1.02] ' : 'border-slate-800 ') + (isLocked ? 'opacity-40 grayscale pointer-events-none ' : '')}>
@@ -1016,81 +997,124 @@
                         )}
                     </div>
 
-                    <div className="relative flex-1 flex justify-center items-center py-4 w-full px-2" style={{ minHeight: '200px' }}>
-                        <div className={"w-full h-full transition-all duration-500 flex justify-center items-center " + (isBlind ? "filter blur-md grayscale" : "")}>
-                            <svg viewBox={`-60 -20 ${svgWidth + 100} ${svgHeight + 40}`} width="100%" height="100%" style={{ overflow: 'visible', maxWidth: '240px' }}>
-                                {/* Label del traste inicial */}
-                                <g transform={`translate(-36, ${fretHeight / 2})`}>
-                                    <rect x="-18" y="-14" width="36" height="24" rx="4" fill="#0f172a" stroke="#334155" strokeWidth="1.5" />
-                                    <text x="0" y="1" dominantBaseline="central" textAnchor="middle" fill="#f59e0b" fontSize="13" fontWeight="900" fontFamily="Inter, sans-serif">{startFret}fr</text>
-                                </g>
+                    <div className="relative flex-1 flex justify-center items-center py-6 w-full pl-6 pr-4">
+                        <svg className={"transition-all duration-500 " + (isBlind ? "filter blur-md grayscale" : "")} viewBox={`-60 -20 220 ${totalHeight + 40}`} width="100%" height={totalHeight} style={{maxWidth: '180px', overflow: 'visible'}}>
+                            
+                            {/* Número de Traste */}
+                            <rect x="-55" y="10" width="30" height="20" rx="4" fill="rgba(15, 23, 42, 0.8)" stroke="#334155" strokeWidth="1"></rect>
+                            <text x="-40" y="24" fill="#f59e0b" fontSize="12" fontWeight="900" textAnchor="middle">{startFret}fr</text>
 
-                                {/* Cuerdas */}
-                                {stringsArray.map((sIdx, i) => (
-                                    <line key={`string-${i}`} x1={i * stringSpacing} y1="0" x2={i * stringSpacing} y2={svgHeight} stroke="#64748b" strokeWidth="1.5" opacity="0.6" />
-                                ))}
+                            {/* Cuerdas */}
+                            {[0,1,2,3,4,5].map(sIdx => (
+                                <line key={`s-${sIdx}`} x1={sIdx * stringSpacing} y1="0" x2={sIdx * stringSpacing} y2={totalHeight} stroke="#64748b" strokeWidth="1.5" opacity="0.6" />
+                            ))}
 
-                                {/* Trastes */}
-                                {fretsArray.map((fretIdx, i) => (
-                                    <line key={`fret-${i}`} x1="0" y1={fretIdx * fretHeight} x2={svgWidth} y2={fretIdx * fretHeight} stroke="#475569" strokeWidth="2.5" />
-                                ))}
+                            {/* Trastes */}
+                            {Array.from({length: numFrets + 1}).map((_, fIdx) => (
+                                <line key={`f-${fIdx}`} x1="0" y1={fIdx * fretHeight} x2={gridWidth} y2={fIdx * fretHeight} stroke="#475569" strokeWidth="2" />
+                            ))}
 
-                                {/* Inlays (Dots) */}
-                                {[3, 5, 7, 9, 15, 17, 19].map(fret => {
-                                    if (fret >= startFret && fret <= startFret + numFrets - 1) {
-                                        const cy = (fret - startFret + 0.5) * fretHeight;
-                                        return <circle key={`dot-${fret}`} cx={svgWidth / 2} cy={cy} r="6" fill="rgba(255,255,255,0.1)" />;
-                                    }
-                                    return null;
-                                })}
-                                {12 >= startFret && 12 <= startFret + numFrets - 1 && (
-                                    <g key="dot-12">
-                                        <circle cx={svgWidth * 0.3} cy={(12 - startFret + 0.5) * fretHeight} r="5" fill="rgba(255,255,255,0.1)" />
-                                        <circle cx={svgWidth * 0.7} cy={(12 - startFret + 0.5) * fretHeight} r="5" fill="rgba(255,255,255,0.1)" />
-                                    </g>
-                                )}
+                            {/* Marcadores */}
+                            {[3, 5, 7, 9, 15, 17, 19].map(fret => {
+                                if (fret >= startFret && fret <= startFret + numFrets - 1) {
+                                    const yPos = (fret - startFret + 0.5) * fretHeight;
+                                    return <circle key={`m-${fret}`} cx={gridWidth / 2} cy={yPos} r="5" fill="rgba(255,255,255,0.1)" />;
+                                }
+                                return null;
+                            })}
+                            {(12 >= startFret && 12 <= startFret + numFrets - 1) && (
+                                <React.Fragment>
+                                    <circle cx={gridWidth / 3} cy={(12 - startFret + 0.5) * fretHeight} r="4" fill="rgba(255,255,255,0.1)" />
+                                    <circle cx={(gridWidth / 3) * 2} cy={(12 - startFret + 0.5) * fretHeight} r="4" fill="rgba(255,255,255,0.1)" />
+                                </React.Fragment>
+                            )}
 
-                                {/* Rastro (Ghost Notes) */}
-                                {!isBlind && options.showGhostNotes && prevFingering && prevFingering.map((noteData, i) => {
-                                    if (noteData.fret >= startFret - 1 && noteData.fret <= startFret + numFrets) {
-                                        const cx = stringsArray.indexOf(noteData.string) * stringSpacing;
-                                        const cy = (noteData.fret - startFret + 0.5) * fretHeight;
-                                        return <circle key={`prev-${i}`} cx={cx} cy={cy} r="14" fill="none" stroke="#38bdf8" strokeWidth="3" opacity="0.6" />;
-                                    }
-                                    return null;
-                                })}
+                            {/* Escalas Overlay */}
+                            {!isBlind && options.showScales && Array.from({length: numFrets}).map((_, fretIdx) => {
+                                const actualFret = startFret + fretIdx;
+                                return stringsArray.map(sNum => {
+                                    const noteMidi = STRING_TUNINGS[sNum] + actualFret;
+                                    const interval = (noteMidi - rootMidi + 120) % 12;
+                                    const scaleData = getScaleData(quality, degreeLabel);
+                                    const scaleNote = scaleData.find(sd => sd.i === interval);
+                                    if (scaleNote) {
+                                        const isFingered = fingering.some(f => f.string === sNum && f.fret === actualFret);
+                                        if (!isFingered) {
+                                            let displayDegree = options.tensionNotation && scaleNote.t ? scaleNote.d.replace('2','9').replace('4','11').replace('6','13') : scaleNote.d;
+                                            const displayLabelScale = options.labelMode === 'intervals' ? displayDegree : noteNames[noteMidi % 12];
+                                            const cx = (stringsArray.indexOf(sNum) / 5) * gridWidth;
+                                            const cy = (fretIdx + 0.5) * fretHeight;
+                                            const fillCol = scaleNote.t ? "#d946ef" : "#6366f1";
+                                            return (
+                                                <g key={`sc-${actualFret}-${sNum}`} pointerEvents="none">
+                                                    <circle cx={cx} cy={cy} r="11" fill={fillCol} stroke="rgba(255,255,255,0.5)" strokeWidth="1" opacity="0.9" />
+                                                    <text x={cx} y={cy} fill="white" fontSize="9" fontWeight="900" textAnchor="middle" dy=".35em">{displayLabelScale}</text>
+                                                </g>
+                                            );
+                                        }
+                                    } return null;
+                                });
+                            })}
 
-                                {/* Notas Principales */}
-                                {fingering.map((noteData, i) => {
-                                    const isRoot = (noteData.note % 12) === (rootMidi % 12);
-                                    let degree = getIntervalDegree(noteData.note, rootMidi, quality, noteData.explicitEnharmonic);
-                                    let isTension = degree.indexOf('2') !== -1 || degree.indexOf('4') !== -1 || degree.indexOf('6') !== -1 || degree.indexOf('9') !== -1 || degree.indexOf('11') !== -1 || degree.indexOf('13') !== -1;
-                                    if (options.tensionNotation && isTension) degree = degree.replace('2', '9').replace('4', '11').replace('6', '13');
-                                    
-                                    const displayLabel = options.labelMode === 'intervals' ? degree : getSpelledNote(rootMidi, effectiveRoot, noteData.note % 12, noteData.explicitEnharmonic);
-                                    
-                                    let fill = isRoot ? '#f59e0b' : isTension ? '#0f172a' : '#0f172a';
-                                    let stroke = isRoot ? '#fbbf24' : isTension ? '#d946ef' : '#475569';
-                                    let textColor = isRoot ? '#020617' : isTension ? '#e879f9' : '#f8fafc';
-                                    
-                                    const cx = stringsArray.indexOf(noteData.string) * stringSpacing;
+                            {/* Tónica Overlay */}
+                            {!isBlind && options.showRootOverlay && Array.from({length: numFrets}).map((_, fretIdx) => {
+                                const actualFret = startFret + fretIdx;
+                                return stringsArray.map(sNum => {
+                                    const noteMidi = STRING_TUNINGS[sNum] + actualFret;
+                                    if (noteMidi % 12 === rootMidi % 12) {
+                                        const isFingered = fingering.some(f => f.string === sNum && f.fret === actualFret);
+                                        if (!isFingered) {
+                                            const cx = (stringsArray.indexOf(sNum) / 5) * gridWidth;
+                                            const cy = (fretIdx + 0.5) * fretHeight;
+                                            return (
+                                                <g key={`rt-${actualFret}-${sNum}`} pointerEvents="none">
+                                                    <rect x={cx-9} y={cy-9} width="18" height="18" fill="rgba(244,63,94,0.1)" stroke="rgba(244,63,94,0.6)" strokeWidth="1" />
+                                                    <text x={cx} y={cy} fill="#f43f5e" fontSize="8" fontWeight="900" textAnchor="middle" dy=".35em">R</text>
+                                                </g>
+                                            );
+                                        }
+                                    } return null;
+                                });
+                            })}
+
+                            {/* Voice Leading Ghost Notes */}
+                            {!isBlind && options.showGhostNotes && prevFingering && prevFingering.map((noteData, i) => {
+                                if (noteData.fret >= startFret - 1 && noteData.fret <= startFret + numFrets) {
+                                    const cx = (stringsArray.indexOf(noteData.string) / 5) * gridWidth;
                                     const cy = (noteData.fret - startFret + 0.5) * fretHeight;
-                                    
-                                    return (
-                                        <g key={`note-${i}`} transform={`translate(${cx}, ${cy})`}>
-                                            <circle cx="0" cy="0" r="14" fill={fill} stroke={stroke} strokeWidth="2" />
-                                            <text x="0" y="1" dominantBaseline="central" textAnchor="middle" fill={textColor} fontSize="11" fontWeight="900" fontFamily="Inter, sans-serif">{displayLabel}</text>
-                                            
-                                            {/* Hitbox invisible para interacción táctil/clic */}
-                                            {options.onPlayNote && (
-                                                <circle cx="0" cy="0" r="20" fill="transparent" cursor="pointer" onClick={(e) => { e.stopPropagation(); options.onPlayNote(noteData); }} />
-                                            )}
-                                        </g>
-                                    );
-                                })}
-                            </svg>
-                        </div>
-                        
+                                    return <circle key={'prev'+i} cx={cx} cy={cy} r="12" fill="none" stroke="rgba(56,189,248,0.8)" strokeWidth="3" pointerEvents="none" />;
+                                } return null;
+                            })}
+
+                            {/* Notas Principales del Acorde */}
+                            {fingering.map((noteData, i) => {
+                                const isRoot = (noteData.note % 12) === (rootMidi % 12);
+                                let degree = getIntervalDegree(noteData.note, rootMidi, quality, noteData.explicitEnharmonic);
+                                let isTension = degree.includes('2') || degree.includes('4') || degree.includes('6') || degree.includes('9') || degree.includes('11') || degree.includes('13');
+                                if (options.tensionNotation && isTension) degree = degree.replace('2', '9').replace('4', '11').replace('6', '13');
+                                
+                                const displayLabel = options.labelMode === 'intervals' ? degree : (
+                                    noteData.explicitEnharmonic ? 
+                                    (noteData.explicitEnharmonic === 'flats' ? MIDI_TO_NOTE_FLAT[noteData.note%12] : MIDI_TO_NOTE_SHARP[noteData.note%12]) 
+                                    : noteNames[noteData.note % 12]
+                                );
+
+                                const cx = (stringsArray.indexOf(noteData.string) / 5) * gridWidth;
+                                const cy = (noteData.fret - startFret + 0.5) * fretHeight;
+                                
+                                const fill = isRoot ? "#f59e0b" : isTension ? "#0f172a" : "#0f172a";
+                                const stroke = isRoot ? "#fbbf24" : isTension ? "#d946ef" : "#475569";
+                                const textColor = isRoot ? "#000000" : isTension ? "#d946ef" : "#ffffff";
+
+                                return (
+                                    <g key={`main-${i}`} style={{cursor: 'pointer'}} onClick={(e) => { e.stopPropagation(); if(options.onPlayNote) options.onPlayNote(noteData); }}>
+                                        <circle cx={cx} cy={cy} r="14" fill={fill} stroke={stroke} strokeWidth="2" />
+                                        <text x={cx} y={cy} fill={textColor} fontSize="11" fontWeight="900" textAnchor="middle" dy=".35em">{displayLabel}</text>
+                                    </g>
+                                );
+                            })}
+                        </svg>
+
                         {isBlind && (
                             <div className="absolute inset-0 z-30 flex items-center justify-center cursor-pointer hide-on-pdf" onClick={function(e){ e.stopPropagation(); setIsRevealed(true); }}>
                                  <span className="bg-slate-800 border border-slate-700 text-white px-4 py-2 rounded-full text-xs font-bold shadow-2xl flex items-center gap-2 hover:bg-slate-700 transition-colors animate-pulse"><Icon name="Eye" size={14}/> Revelar</span>
@@ -1107,77 +1131,52 @@
             const fretsArray = [];
             for(let i=0; i<=numFrets; i++) fretsArray.push(i);
             
-            const fretHeight = 40;
-            const stringSpacing = 32;
-            const svgWidth = stringSpacing * 5;
-            const svgHeight = numFrets * fretHeight;
+            const noteNamesAngloSharp = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+            const noteNamesAngloFlat = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B'];
+            const noteNamesLatinSharp = ['Do', 'Do#', 'Re', 'Re#', 'Mi', 'Fa', 'Fa#', 'Sol', 'Sol#', 'La', 'La#', 'Si'];
+            const noteNamesLatinFlat = ['Do', 'Reb', 'Re', 'Mib', 'Mi', 'Fa', 'Solb', 'Sol', 'Lab', 'La', 'Sib', 'Si'];
 
             return (
-                <div className="relative flex justify-center w-full mx-auto" style={{ maxWidth: '280px', minHeight: '600px' }}>
-                    <svg viewBox={`-60 -10 ${svgWidth + 100} ${svgHeight + 20}`} width="100%" height="100%" style={{ overflow: 'visible' }}>
-                        {/* Background Mástil */}
-                        <rect x="-8" y="0" width={svgWidth + 16} height={svgHeight} fill="#2a241e" stroke="#1a1511" strokeWidth="8" rx="4" />
-                        
-                        {/* Etiquetas de Trastes */}
-                        {fretsArray.map(fret => {
-                            if (fret === 0) return null;
+                <div className="relative flex justify-between w-full max-w-[200px] border-4 border-[#1a1511] bg-[#2a241e] shadow-[inset_0_0_12px_rgba(0,0,0,0.9)] rounded-md transition-all mx-auto ml-6 md:ml-8" style={{ height: '480px' }}>
+                    {fretsArray.map(function(fret) {
+                        if (fret === 0) return null;
+                        return <div key={'fn'+fret} className="absolute -left-6 md:-left-8 text-[10px] md:text-xs font-bold text-slate-500 pointer-events-none flex items-center justify-end w-6 pr-1" style={{ top: ((fret - 0.5) / numFrets) * 100 + '%', transform: 'translateY(-50%)' }}>{fret}</div>;
+                    })}
+                    {[3, 5, 7, 9, 15].map(function(fret) {
+                        return <div key={'m'+fret} className="absolute w-4 h-4 bg-slate-400/30 rounded-full left-1/2 -translate-x-1/2 pointer-events-none z-0" style={{ top: ((fret - 0.5) / numFrets) * 100 + '%' }} />;
+                    })}
+                    <div className="absolute w-3 h-3 bg-slate-400/30 rounded-full left-[30%] -translate-x-1/2 pointer-events-none z-0" style={{ top: ((12 - 0.5) / numFrets) * 100 + '%' }} />
+                    <div className="absolute w-3 h-3 bg-slate-400/30 rounded-full left-[70%] -translate-x-1/2 pointer-events-none z-0" style={{ top: ((12 - 0.5) / numFrets) * 100 + '%' }} />
+                    
+                    {stringsArray.map(function(sIdx) { return <div key={sIdx} className="w-[1.5px] bg-slate-400 opacity-60 h-full relative z-0 pointer-events-none" />; })}
+                    <div className="absolute top-0 left-0 w-full h-1.5 bg-slate-300 shadow-md z-0 pointer-events-none" />
+                    {fretsArray.map(function(i) { 
+                        if (i === 0) return null;
+                        return <div key={i} className="absolute w-full bg-slate-600 shadow-[0_1px_1px_rgba(0,0,0,0.2)] z-0 pointer-events-none" style={{ height: '2px', top: (i / numFrets * 100) + '%' }} />; 
+                    })}
+                    {fretsArray.map(function(fret) {
+                        return stringsArray.map(function(sNum) {
+                            const isSelectedNote = selectedNotes.find(function(n) { return n.string === sNum && n.fret === fret; });
+                            const noteMidi = STRING_TUNINGS[sNum] + fret;
+                            let noteName = '';
+                            if (isSelectedNote) {
+                                let prefToUse = isSelectedNote.explicitEnharmonic || 'sharps';
+                                let namesArray = notationMode === 'latin' ? (prefToUse === 'flats' ? noteNamesLatinFlat : noteNamesLatinSharp) : (prefToUse === 'flats' ? noteNamesAngloFlat : noteNamesAngloSharp);
+                                noteName = namesArray[noteMidi % 12];
+                            }
+                            const topPos = fret === 0 ? 0 : (fret - 0.5) / numFrets * 100;
                             return (
-                                <text key={`fl-${fret}`} x="-30" y={(fret - 0.5) * fretHeight + 1} dominantBaseline="central" textAnchor="end" fill="#64748b" fontSize="14" fontWeight="bold" fontFamily="Inter, sans-serif">{fret}</text>
+                                <div key={`grid-${fret}-${sNum}`} onClick={function() { onToggleNote(sNum, fret, noteMidi, isSelectedNote); }} className="absolute w-8 h-8 -ml-4 -mt-4 cursor-pointer flex items-center justify-center z-20 rounded-full hover:bg-white/10 transition-colors" style={{ left: `${(stringsArray.indexOf(sNum) / 5) * 100}%`, top: `${topPos}%` }}>
+                                    {isSelectedNote && (
+                                        <svg width="24" height="24" viewBox="0 0 24 24" className="drop-shadow-lg">
+                                            <circle cx="12" cy="12" r="11" fill="#f59e0b" stroke="#fbbf24" strokeWidth="1"></circle>
+                                            <text x="12" y="12" fill="#0f172a" fontSize="9" fontWeight="900" textAnchor="middle" dy=".35em">{noteName}</text>
+                                        </svg>
+                                    )}
+                                </div>
                             );
-                        })}
-                        
-                        {/* Inlays */}
-                        {[3, 5, 7, 9, 15].map(fret => (
-                            <circle key={`mi-${fret}`} cx={svgWidth / 2} cy={(fret - 0.5) * fretHeight} r="8" fill="rgba(148,163,184,0.15)" />
-                        ))}
-                        <circle cx={svgWidth * 0.3} cy={(12 - 0.5) * fretHeight} r="7" fill="rgba(148,163,184,0.15)" />
-                        <circle cx={svgWidth * 0.7} cy={(12 - 0.5) * fretHeight} r="7" fill="rgba(148,163,184,0.15)" />
-                        
-                        {/* Cuerdas */}
-                        {stringsArray.map((sIdx, i) => (
-                            <line key={`is-${i}`} x1={i * stringSpacing} y1="0" x2={i * stringSpacing} y2={svgHeight} stroke="#94a3b8" strokeWidth="2" opacity="0.6" />
-                        ))}
-                        
-                        {/* Cejilla y Trastes Metálicos */}
-                        <line x1="-8" y1="0" x2={svgWidth + 8} y2="0" stroke="#cbd5e1" strokeWidth="6" />
-                        {fretsArray.map(i => {
-                            if (i === 0) return null;
-                            return <line key={`if-${i}`} x1="-8" y1={i * fretHeight} x2={svgWidth + 8} y2={i * fretHeight} stroke="#475569" strokeWidth="3" />;
-                        })}
-                        
-                        {/* Notas Seleccionadas e Hitboxes */}
-                        {fretsArray.map(fret => {
-                            return stringsArray.map(sNum => {
-                                const isSelectedNote = selectedNotes.find(n => n.string === sNum && n.fret === fret);
-                                const noteMidi = STRING_TUNINGS[sNum] + fret;
-                                const cx = stringsArray.indexOf(sNum) * stringSpacing;
-                                const cy = fret === 0 ? -12 : (fret - 0.5) * fretHeight;
-                                
-                                let noteName = '';
-                                if (isSelectedNote) {
-                                    noteName = getSpelledNote(noteMidi % 12, 'C', noteMidi % 12, isSelectedNote.explicitEnharmonic);
-                                }
-                                
-                                return (
-                                    <g key={`ig-${fret}-${sNum}`} transform={`translate(${cx}, ${cy})`} onClick={() => onToggleNote(sNum, fret, noteMidi, isSelectedNote)} style={{ cursor: 'pointer' }}>
-                                        {/* Hitbox invisible */}
-                                        <circle cx="0" cy="0" r="16" fill="transparent" />
-                                        {/* Círculo Visible */}
-                                        {isSelectedNote && (
-                                            <g>
-                                                <circle cx="0" cy="0" r="14" fill="#f59e0b" stroke="#fcd34d" strokeWidth="2" />
-                                                <text x="0" y="1" dominantBaseline="central" textAnchor="middle" fill="#020617" fontSize="11" fontWeight="900" fontFamily="Inter, sans-serif">{noteName}</text>
-                                            </g>
-                                        )}
-                                        {/* Efecto Hover */}
-                                        {!isSelectedNote && (
-                                            <circle cx="0" cy="0" r="14" fill="rgba(255,255,255,0.1)" className="opacity-0 hover:opacity-100 transition-opacity" />
-                                        )}
-                                    </g>
-                                );
-                            });
-                        })}
-                    </svg>
+                        });
+                    })}
                 </div>
             );
         };
@@ -1669,7 +1668,8 @@
                     setBuilderSeq(function(prev) {
                         return prev.map(function(item) {
                             if (item.isCustom) return item; 
-                            const opts = generateChordData(item.queryRoot, item.quality, item.drop, item.bassString, getQualsForTrack(item.track), null, item.track, notationMode);
+                            const currentQuals = getQualsForTrack(item.track || 'quads');
+                            const opts = generateChordData(item.queryRoot, item.quality, item.drop, item.bassString, currentQuals, null, item.track, notationMode);
                             if (opts.length === 0) return item;
                             const updated = opts.find(function(o) { return o.fingering.every(function(f, idx) { return f.note === item.fingering[idx].note && f.string === item.fingering[idx].string; }); });
                             if (updated) return Object.assign({}, item, { formattedChordName: updated.formattedChordName });
@@ -1767,7 +1767,7 @@
                 }
 
                 if (customNotes.length > 0) {
-                    const sortedNotes = Array.from(new Map(customNotes.map(n => [n.note, n])).values()).sort((a,b) => a.note - b.note);
+                    const sortedNotes = Array.from(customNotes).sort((a,b) => a.note - b.note);
                     const degrees = sortedNotes.map(n => getIntervalDegree(n.note, finalRootMidi, finalQuality, n.explicitEnharmonic));
                     intervalName = [...new Set(degrees)].join('-');
                 }
@@ -1776,7 +1776,7 @@
                 const newChord = {
                     isCustom: true, name: intervalName, formattedChordName: nameToUse,
                     fingering: customNotes.map(n => ({ string: n.string, fret: n.fret, note: n.note, explicitEnharmonic: n.explicitEnharmonic })),
-                    prevFingering: null, dist: 0, vlRank: 0, track: 'custom', rootMidi: finalRootMidi, quality: finalQuality, queryRoot: MIDI_TO_NOTE_SHARP[finalRootMidi % 12]
+                    prevFingering: null, dist: 0, vlRank: 0, track: 'custom', rootMidi: finalRootMidi, quality: finalQuality
                 };
                 
                 let newSeq = [...builderSeq];
@@ -1805,8 +1805,8 @@
             function saveCurrentProgression() { 
                 showPrompt("Dale un nombre a tu progresión favorita:", function(name) { 
                     if (name && name.trim() !== '') {
-                        setSavedProgressions([...savedProgressions, { id: Date.now(), name: name.trim(), seq: builderSeq }]); 
-                        showAlert(`Progresión "${name.trim()}" guardada exitosamente en la sección 'Mis Progresiones Guardadas' (abajo).`);
+                        setSavedProgressions([...savedProgressions, { id: Date.now(), name: name.trim(), seq: builderSeq }]);
+                        showAlert(`Progresión guardada exitosamente en la sección 'Mis Progresiones Guardadas' (abajo).`);
                         setTimeout(() => {
                             const sec = document.getElementById('saved-progressions-section');
                             if (sec) sec.scrollIntoView({ behavior: 'smooth' });
@@ -1814,31 +1814,30 @@
                     }
                 }); 
             }
-            
             function loadProgression(prog) { setBuilderSeq(prog.seq); setEditingIndex(null); }
             function deleteProgression(id) { showConfirm("¿Seguro que deseas eliminar esta progresión guardada?", function() { setSavedProgressions(savedProgressions.filter(function(p) { return p.id !== id; })); }); }
 
-            const exportProgression = function() {
+            const exportCurrentProgression = function() {
+                if (builderSeq.length === 0) return;
+                const tempProg = { id: Date.now(), name: "Progresion Dinamica", seq: builderSeq };
+                exportProgression(tempProg);
+            };
+
+            const exportProgression = function(prog) {
                 try {
-                    const lightSeq = builderSeq.map(function(c) { 
-                        return { 
-                            i: c.isCustom ? 1 : 0, 
-                            n: c.name, 
-                            fn: c.formattedChordName, 
-                            f: c.fingering.map(function(f) { return f.string + ':' + f.fret + ':' + f.note + ':' + (f.explicitEnharmonic || ''); }).join(','), 
-                            r: c.queryRoot, 
-                            q: c.quality, 
-                            rm: c.rootMidi, 
-                            d: c.drop, 
-                            b: c.bassString, 
-                            t: c.track 
-                        }; 
+                    const lightSeq = prog.seq.map(function(c) {
+                        return {
+                            i: c.isCustom ? 1 : 0, n: c.name, fn: c.formattedChordName, 
+                            f: c.fingering.map(function(f) { return f.string + ':' + f.fret + ':' + f.note + (f.explicitEnharmonic ? ':' + f.explicitEnharmonic : ''); }).join('|'),
+                            r: c.queryRoot, q: c.quality, rm: c.rootMidi, d: c.drop, b: c.bassString, t: c.track
+                        };
                     });
-                    const jsonStr = JSON.stringify(lightSeq, null, 2);
+                    const lightProg = { id: prog.id, n: prog.name, s: lightSeq };
+                    const jsonStr = JSON.stringify(lightProg, null, 2);
                     const blob = new Blob([jsonStr], { type: "application/json" });
                     const url = URL.createObjectURL(blob);
                     const link = document.createElement('a');
-                    link.download = `Progresion_${Date.now()}.json`;
+                    link.download = `Progresion_${prog.name.replace(/\s+/g, '_')}.json`;
                     link.href = url;
                     link.click();
                     URL.revokeObjectURL(url);
@@ -1847,8 +1846,7 @@
 
             const importProgression = function() {
                 const input = document.createElement('input');
-                input.type = 'file';
-                input.accept = '.json';
+                input.type = 'file'; input.accept = '.json';
                 input.onchange = function(e) {
                     const file = e.target.files[0];
                     if (!file) return;
@@ -1857,22 +1855,23 @@
                         try {
                             const jsonStr = event.target.result;
                             const lightProg = JSON.parse(jsonStr);
-                            if (lightProg && lightProg.length > 0) {
-                                const fullSeq = lightProg.map(function(lc) {
-                                    const fingering = lc.f.split(',').filter(Boolean).map(function(fs) {
+                            if (lightProg && lightProg.s && lightProg.n) {
+                                const fullSeq = lightProg.s.map(function(lc) {
+                                    const fingering = lc.f.split('|').filter(Boolean).map(function(fs) {
                                         const p = fs.split(':');
                                         return { string: parseInt(p[0]), fret: parseInt(p[1]), note: parseInt(p[2]), explicitEnharmonic: p[3] || null };
                                     });
-                                    return { 
-                                        isCustom: lc.i === 1, name: lc.n, formattedChordName: lc.fn, fingering: fingering, prevFingering: null, dist: 0, vlRank: 0, track: lc.t, rootMidi: lc.rm, quality: lc.q, queryRoot: lc.r, drop: lc.d, bassString: lc.b 
+                                    return {
+                                        isCustom: lc.i === 1, name: lc.n, formattedChordName: lc.fn, fingering: fingering, prevFingering: null, dist: 0, vlRank: 0, 
+                                        track: lc.t, rootMidi: lc.rm, quality: lc.q, queryRoot: lc.r, drop: lc.d, bassString: lc.b
                                     };
                                 });
-                                const prog = { id: Date.now(), name: `Importada_${Date.now()}`, seq: fullSeq };
+                                const prog = { id: Date.now(), name: lightProg.n, seq: fullSeq };
                                 setSavedProgressions(function(prev) { return [...prev, prog]; });
-                                showAlert(`Progresión importada exitosamente. Revisa la sección de Favoritos (abajo).`);
-                                setTimeout(function() { 
+                                showAlert(`Progresión "${prog.name}" importada exitosamente. Revisa la sección de Favoritos (abajo).`);
+                                setTimeout(() => {
                                     const sec = document.getElementById('saved-progressions-section');
-                                    if (sec) sec.scrollIntoView({ behavior: 'smooth' }); 
+                                    if (sec) sec.scrollIntoView({ behavior: 'smooth' });
                                 }, 500);
                             } else {
                                 showAlert("El archivo JSON no tiene un formato válido.");
@@ -2387,27 +2386,15 @@
                                     <div className="space-y-8">
                                         <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 md:p-10 shadow-2xl print:border-none print:bg-transparent print:p-0 print:shadow-none">
                                             
-                                            <div className="flex justify-between items-center mb-6 print:hidden hide-on-pdf flex-wrap gap-4">
-                                                <h3 className="text-amber-500 font-black text-lg flex items-center gap-3"><Icon name="Layers" size={20}/> Constructor Dinámico</h3>
-                                                
-                                                <div className="flex flex-wrap gap-2">
-                                                    <button type="button" onClick={importProgression} className="text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 flex items-center gap-1.5 text-xs font-bold transition-colors px-3 py-1.5 rounded-lg border border-slate-700">
-                                                        <Icon name="Download" size={14}/> Importar .JSON
-                                                    </button>
-                                                    {builderSeq.length > 0 && editingIndex === null && (
-                                                        <React.Fragment>
-                                                            <button type="button" onClick={exportProgression} className="text-slate-300 hover:text-emerald-400 bg-slate-800 hover:bg-slate-700 flex items-center gap-1.5 text-xs font-bold transition-colors px-3 py-1.5 rounded-lg border border-slate-700">
-                                                                <Icon name="UploadCloud" size={14}/> Exportar
-                                                            </button>
-                                                            <button type="button" onClick={saveCurrentProgression} className="text-slate-300 hover:text-amber-400 bg-slate-800 hover:bg-slate-700 flex items-center gap-1.5 text-xs font-bold transition-colors px-3 py-1.5 rounded-lg border border-slate-700">
-                                                                <Icon name="Save" size={14}/> Guardar Fav
-                                                            </button>
-                                                            <button type="button" onClick={function(){setBuilderSeq([]); setIsPlaying(false); setPendingOptions([]);}} className="text-slate-400 hover:text-rose-500 flex items-center gap-1.5 text-xs font-bold transition-colors bg-slate-800 px-3 py-1.5 rounded-lg border border-slate-700">
-                                                                <Icon name="Trash2" size={14}/> Limpiar
-                                                            </button>
-                                                        </React.Fragment>
-                                                    )}
-                                                </div>
+                                            <div className="flex justify-between items-center mb-6 print:hidden hide-on-pdf">
+                                                <h3 className="text-amber-500 font-black text-lg flex items-center gap-3"><Icon name="Layers" size={20}/> Constructor de Progresiones Dinámicas</h3>
+                                                {builderSeq.length > 0 && editingIndex === null && (
+                                                    <div className="flex gap-2">
+                                                        <button type="button" onClick={saveCurrentProgression} className="text-slate-400 hover:text-emerald-500 flex items-center gap-1.5 text-xs font-bold transition-colors bg-slate-800 px-3 py-1.5 rounded-lg border border-slate-700"><Icon name="Save" size={14}/> Guardar</button>
+                                                        <button type="button" onClick={exportCurrentProgression} className="text-slate-400 hover:text-sky-500 flex items-center gap-1.5 text-xs font-bold transition-colors bg-slate-800 px-3 py-1.5 rounded-lg border border-slate-700"><Icon name="Share2" size={14}/> Exportar</button>
+                                                        <button type="button" onClick={function(){setBuilderSeq([]); setIsPlaying(false); setPendingOptions([]);}} className="text-slate-400 hover:text-rose-500 flex items-center gap-1.5 text-xs font-bold transition-colors bg-slate-800 px-3 py-1.5 rounded-lg border border-slate-700"><Icon name="Trash2" size={14}/> Limpiar</button>
+                                                    </div>
+                                                )}
                                             </div>
 
                                             <div className="bg-[#0f172a] border border-slate-700 p-4 md:p-6 rounded-2xl mb-8 print:hidden hide-on-pdf shadow-lg">
@@ -2476,26 +2463,35 @@
                                                 </div>
                                             )}
 
-                                            <div id="saved-progressions-section" className="pt-8 print:hidden hide-on-pdf">
-                                                <h4 className="text-amber-500 font-bold mb-4 text-sm uppercase tracking-widest flex items-center gap-2 justify-center"><Icon name="Bookmark" size={16}/> Mis Progresiones Guardadas</h4>
+                                            <div id="saved-progressions-section" className="pt-8 print:hidden hide-on-pdf border-t border-slate-800 mt-8">
+                                                <div className="flex justify-between items-center mb-6">
+                                                    <h4 className="text-amber-500 font-bold text-sm uppercase tracking-widest flex items-center gap-2"><Icon name="Bookmark" size={16}/> Mis Progresiones Guardadas</h4>
+                                                    <button type="button" onClick={importProgression} className="bg-slate-800 hover:bg-slate-700 text-sky-400 text-xs font-bold px-3 py-1.5 rounded-lg flex items-center gap-2 border border-slate-700 transition-colors">
+                                                        <Icon name="UploadCloud" size={14}/> Importar .JSON
+                                                    </button>
+                                                </div>
+                                                
                                                 {savedProgressions.length > 0 ? (
                                                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                                                         {savedProgressions.map(function(prog) {
                                                             return (
                                                                 <div key={prog.id} className="bg-[#0f172a] border border-slate-700 p-4 rounded-xl flex justify-between items-center group hover:border-amber-500/50 transition-colors">
-                                                                    <div className="cursor-pointer flex-1" onClick={function(){loadProgression(prog);}}>
+                                                                    <div className="cursor-pointer flex-1 overflow-hidden" onClick={function(){loadProgression(prog);}}>
                                                                         <div className="text-slate-200 font-bold text-sm truncate">{prog.name}</div>
                                                                         <div className="text-slate-500 text-[10px]">{prog.seq.length} Acordes</div>
                                                                     </div>
-                                                                    <button type="button" onClick={function(){deleteProgression(prog.id);}} className="p-2 text-slate-500 hover:text-rose-500 hover:bg-rose-500/10 rounded-lg transition-colors ml-2"><Icon name="Trash2" size={14}/></button>
+                                                                    <div className="flex gap-1 ml-2">
+                                                                        <button type="button" onClick={function(){exportProgression(prog);}} className="p-2 text-slate-500 hover:text-sky-500 hover:bg-sky-500/10 rounded-lg transition-colors"><Icon name="Share2" size={14}/></button>
+                                                                        <button type="button" onClick={function(){deleteProgression(prog.id);}} className="p-2 text-slate-500 hover:text-rose-500 hover:bg-rose-500/10 rounded-lg transition-colors"><Icon name="Trash2" size={14}/></button>
+                                                                    </div>
                                                                 </div>
                                                             );
                                                         })}
                                                     </div>
                                                 ) : (
-                                                    <div className="text-center text-slate-500 text-xs bg-[#0f172a] border border-slate-800 p-8 rounded-xl">
-                                                        <Icon name="Info" size={24} className="mx-auto mb-2 opacity-50"/>
-                                                        No tienes progresiones guardadas aún. Crea una arriba y presiona "Guardar Fav".
+                                                    <div className="text-center py-8 bg-[#0f172a]/50 rounded-xl border border-slate-800 border-dashed">
+                                                        <Icon name="Bookmark" size={32} className="mx-auto text-slate-700 mb-2"/>
+                                                        <p className="text-slate-500 text-sm">No tienes progresiones guardadas.</p>
                                                     </div>
                                                 )}
                                             </div>
@@ -2552,78 +2548,79 @@
                         {}
                         {activeTab === 'reverse' && (
                             <div className="py-8 animate-in fade-in zoom-in-95 duration-500">
-                                <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 md:p-10 shadow-2xl relative max-w-5xl mx-auto flex flex-col md:flex-row gap-8">
-                                    <div className="flex-1">
-                                        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
-                                            <div>
-                                                <h2 className="text-2xl font-black text-amber-500 flex items-center gap-3"><Icon name="Search" size={28}/> Reconocedor de Acordes Inverso</h2>
-                                                <p className="text-slate-400 text-sm mt-2">Haz clic en el diapasón interactivo para ubicar las notas. El motor analizará tu postura y te mostrará el acorde exacto.</p>
-                                            </div>
-                                            <div className="flex gap-2 w-full md:w-auto overflow-x-auto shrink-0 pb-2 md:pb-0">
-                                                {reverseNotes.length > 0 && (
-                                                    <button type="button" onClick={function(){setReverseNotes([]);}} className="text-slate-400 hover:text-rose-500 flex items-center gap-2 text-sm font-bold transition-colors bg-slate-800 px-4 py-2 rounded-xl border border-slate-700 shrink-0 shadow-md">
-                                                        <Icon name="Trash2" size={16}/> Limpiar Diapasón
-                                                    </button>
-                                                )}
-                                            </div>
+                                <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 md:p-10 shadow-2xl relative max-w-5xl mx-auto">
+                                    <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+                                        <div>
+                                            <h2 className="text-2xl font-black text-amber-500 flex items-center gap-3"><Icon name="Search" size={28}/> Reconocedor de Acordes Inverso</h2>
+                                            <p className="text-slate-400 text-sm mt-2">Haz clic en el diapasón interactivo para ubicar las notas. El motor analizará tu postura y le mostrará el acorde exacto.</p>
                                         </div>
-                                        <div className="w-full max-w-[320px] mx-auto overflow-visible py-4">
-                                            <InteractiveFretboard selectedNotes={reverseNotes} onToggleNote={toggleReverseNote} leftHanded={leftHanded} notationMode={notationMode} />
+                                        <div className="flex gap-2 w-full md:w-auto overflow-x-auto shrink-0 pb-2 md:pb-0">
+                                            {reverseNotes.length > 0 && (
+                                                <button type="button" onClick={function(){setReverseNotes([]);}} className="text-slate-400 hover:text-rose-500 flex items-center gap-2 text-sm font-bold transition-colors bg-slate-800 px-4 py-2 rounded-xl border border-slate-700 shrink-0 shadow-md">
+                                                    <Icon name="Trash2" size={16}/> Limpiar Diapasón
+                                                </button>
+                                            )}
                                         </div>
                                     </div>
                                     
-                                    <div className="flex-1 flex flex-col justify-start bg-[#0f172a] p-6 md:p-8 rounded-2xl border border-slate-800">
-                                        <h3 className="text-xs font-black uppercase tracking-widest text-slate-500 mb-6 border-b border-slate-800 pb-3">Resultados del Análisis ({reverseNotes.length} notas)</h3>
+                                    <div className="flex flex-col lg:flex-row gap-10">
+                                        <div className="flex-1 w-full max-w-[320px] mx-auto overflow-visible py-4">
+                                            <InteractiveFretboard selectedNotes={reverseNotes} onToggleNote={toggleReverseNote} leftHanded={leftHanded} notationMode={notationMode} />
+                                        </div>
                                         
-                                        {reverseNotes.length === 0 ? (
-                                            <div className="flex flex-col items-center justify-center h-full text-slate-600 opacity-60 mt-10">
-                                                <Icon name="Music" size={48} className="mb-4" />
-                                                <p className="text-center font-bold">Selecciona notas en el diapasón para analizar.</p>
-                                                <p className="text-center text-xs mt-3 bg-slate-900 p-3 rounded-xl border border-slate-800"><span className="text-amber-500">1 Clic:</span> # Sostenido <br/><span className="text-amber-500">2 Clics:</span> b Bemol <br/><span className="text-amber-500">3 Clics:</span> Borrar nota</p>
-                                            </div>
-                                        ) : reverseNotes.length === 1 ? (
-                                            <div className="flex flex-col items-center justify-center h-full text-amber-500 mt-10 animate-in fade-in zoom-in duration-300">
-                                                <Icon name="Target" size={48} className="mb-4 drop-shadow-[0_0_15px_rgba(245,158,11,0.5)]" />
-                                                <h4 className="text-2xl font-black mb-2 uppercase tracking-widest">Nota Única</h4>
-                                                <p className="text-4xl font-black text-slate-100">
-                                                    {(() => {
-                                                        const n = reverseNotes[0];
-                                                        const pref = n.explicitEnharmonic || 'sharps';
-                                                        const namesArray = notationMode === 'latin' ? (pref === 'flats' ? MIDI_TO_NOTE_FLAT : MIDI_TO_NOTE_SHARP).map(k => translateNote(k, 'latin')) : (pref === 'flats' ? MIDI_TO_NOTE_FLAT : MIDI_TO_NOTE_SHARP);
-                                                        return namesArray[n.note % 12];
-                                                    })()}
-                                                </p>
-                                                <p className="text-slate-500 text-sm mt-4 font-bold">Añade otra nota para calcular el intervalo.</p>
-                                            </div>
-                                        ) : reverseNotes.length === 2 ? (
-                                            <div className="flex flex-col items-center justify-center h-full text-sky-500 mt-10 animate-in fade-in zoom-in duration-300">
-                                                <Icon name="Layers" size={48} className="mb-4 drop-shadow-[0_0_15px_rgba(14,165,233,0.5)]" />
-                                                <h4 className="text-2xl font-black mb-2 uppercase tracking-widest">Intervalo Analizado</h4>
-                                                <p className="text-3xl font-black text-slate-100 text-center">{getIntervalName(reverseNotes)}</p>
-                                                <p className="text-slate-500 text-sm mt-4 font-bold">Añade una tercera nota para formar un acorde.</p>
-                                            </div>
-                                        ) : detectedChords.length > 0 ? (
-                                            <div className="space-y-4 max-h-[500px] overflow-y-auto pr-2">
-                                                {detectedChords.map(function(match, i) {
-                                                    return (
-                                                        <div key={i} className={"p-4 rounded-xl border flex justify-between items-center transition-all " + (i === 0 ? "bg-amber-500/10 border-amber-500/50 shadow-[0_0_15px_rgba(245,158,11,0.1)]" : "bg-slate-900 border-slate-700")}>
-                                                            <div>
-                                                                <div className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">{match.quality}</div>
-                                                                <div className={"font-black tracking-tight " + (i === 0 ? "text-4xl text-amber-400" : "text-2xl text-slate-200")}>
-                                                                    <ChordNameDisplay name={match.name} />
+                                        <div className="flex-1 flex flex-col justify-start bg-[#0f172a] p-6 md:p-8 rounded-2xl border border-slate-800">
+                                            <h3 className="text-xs font-black uppercase tracking-widest text-slate-500 mb-6 border-b border-slate-800 pb-3">Resultados del Análisis ({reverseNotes.length} notas)</h3>
+                                            
+                                            {reverseNotes.length === 0 ? (
+                                                <div className="flex flex-col items-center justify-center h-full text-slate-600 opacity-60 mt-10">
+                                                    <Icon name="Music" size={48} className="mb-4" />
+                                                    <p className="text-center font-bold">Selecciona notas en el diapasón para analizar.</p>
+                                                    <p className="text-center text-xs mt-3 bg-slate-900 p-3 rounded-xl border border-slate-800"><span className="text-amber-500">1 Clic:</span> # Sostenido <br/><span className="text-amber-500">2 Clics:</span> b Bemol <br/><span className="text-amber-500">3 Clics:</span> Borrar nota</p>
+                                                </div>
+                                            ) : reverseNotes.length === 1 ? (
+                                                <div className="flex flex-col items-center justify-center h-full text-amber-500 mt-10 animate-in fade-in zoom-in duration-300">
+                                                    <Icon name="Target" size={48} className="mb-4 drop-shadow-[0_0_15px_rgba(245,158,11,0.5)]" />
+                                                    <h4 className="text-2xl font-black mb-2 uppercase tracking-widest">Nota Única</h4>
+                                                    <p className="text-4xl font-black text-slate-100">
+                                                        {(() => {
+                                                            const n = reverseNotes[0];
+                                                            const pref = n.explicitEnharmonic || 'sharps';
+                                                            const namesArray = notationMode === 'latin' ? (pref === 'flats' ? MIDI_TO_NOTE_FLAT : MIDI_TO_NOTE_SHARP).map(k => translateNote(k, 'latin')) : (pref === 'flats' ? MIDI_TO_NOTE_FLAT : MIDI_TO_NOTE_SHARP);
+                                                            return namesArray[n.note % 12];
+                                                        })()}
+                                                    </p>
+                                                    <p className="text-slate-500 text-sm mt-4 font-bold">Añade otra nota para calcular el intervalo.</p>
+                                                </div>
+                                            ) : reverseNotes.length === 2 ? (
+                                                <div className="flex flex-col items-center justify-center h-full text-sky-500 mt-10 animate-in fade-in zoom-in duration-300">
+                                                    <Icon name="Layers" size={48} className="mb-4 drop-shadow-[0_0_15px_rgba(14,165,233,0.5)]" />
+                                                    <h4 className="text-2xl font-black mb-2 uppercase tracking-widest">Intervalo Analizado</h4>
+                                                    <p className="text-3xl font-black text-slate-100 text-center">{getIntervalName(reverseNotes)}</p>
+                                                    <p className="text-slate-500 text-sm mt-4 font-bold">Añade una tercera nota para formar un acorde.</p>
+                                                </div>
+                                            ) : detectedChords.length > 0 ? (
+                                                <div className="space-y-4 max-h-[300px] overflow-y-auto pr-2">
+                                                    {detectedChords.map(function(match, i) {
+                                                        return (
+                                                            <div key={i} className={"p-4 rounded-xl border flex justify-between items-center transition-all " + (i === 0 ? "bg-amber-500/10 border-amber-500/50 shadow-[0_0_15px_rgba(245,158,11,0.1)]" : "bg-slate-900 border-slate-700")}>
+                                                                <div>
+                                                                    <div className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">{match.quality}</div>
+                                                                    <div className={"font-black tracking-tight " + (i === 0 ? "text-4xl text-amber-400" : "text-2xl text-slate-200")}>
+                                                                        <ChordNameDisplay name={match.name} />
+                                                                    </div>
                                                                 </div>
+                                                                {i === 0 && <div className="bg-amber-500 text-slate-900 text-[10px] font-black uppercase px-3 py-1 rounded-full">Mejor Match</div>}
                                                             </div>
-                                                            {i === 0 && <div className="bg-amber-500 text-slate-900 text-[10px] font-black uppercase px-3 py-1 rounded-full">Mejor Match</div>}
-                                                        </div>
-                                                    );
-                                                })}
-                                            </div>
-                                        ) : (
-                                            <div className="flex flex-col items-center justify-center h-full text-slate-500 mt-10">
-                                                <Icon name="AlertCircle" size={48} className="mb-4 opacity-50" />
-                                                <p className="text-center font-bold">No se encontró una coincidencia exacta de este patrón en la base de datos de armonía jazzística.</p>
-                                            </div>
-                                        )}
+                                                        );
+                                                    })}
+                                                </div>
+                                            ) : (
+                                                <div className="flex flex-col items-center justify-center h-full text-slate-500 mt-10">
+                                                    <Icon name="AlertCircle" size={48} className="mb-4 opacity-50" />
+                                                    <p className="text-center font-bold">No se encontró una coincidencia exacta de este patrón en la base de datos de armonía jazzística.</p>
+                                                </div>
+                                            )}
+                                        </div>
                                     </div>
                                 </div>
                             </div>
