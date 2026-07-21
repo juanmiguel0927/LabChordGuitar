@@ -745,9 +745,11 @@
                 { id: '7#11', name: '7(#11)', intervals: [0,4,6,7,10], score: 13 },
                 { id: '9#11', name: '9(#11)', intervals: [0,2,4,6,7,10], score: 14 },
                 { id: 'Maj9#11', name: 'Maj9(#11)', intervals: [0,2,4,6,7,11], score: 14 },
-                { id: '13', name: '13', intervals: [0,2,4,5,7,9,10], score: 16 },
-                { id: 'Maj13', name: 'Maj13', intervals: [0,2,4,5,7,9,11], score: 16 },
-                { id: 'm13', name: 'm13', intervals: [0,2,3,5,7,9,10], score: 16 },
+                
+                // Familia de las 13nas y variaciones (ahora adaptadas a la guitarra real omitiendo 11nas por defecto)
+                { id: '13', name: '13', intervals: [0,2,4,7,9,10], score: 16 },
+                { id: 'Maj13', name: 'Maj13', intervals: [0,2,4,7,9,11], score: 16 },
+                { id: 'm13', name: 'm13', intervals: [0,2,3,7,9,10], score: 16 },
                 { id: '13#11', name: '13(#11)', intervals: [0,2,4,6,7,9,10], score: 17 },
                 { id: 'Maj13#11', name: 'Maj13(#11)', intervals: [0,2,4,6,7,9,11], score: 17 },
                 { id: '13b9', name: '13(b9)', intervals: [0,1,4,7,9,10], score: 16 },
@@ -758,7 +760,7 @@
                 { id: '13sus4(no5)', name: '13sus4', intervals: [0,2,5,9,10], score: 14 },
                 { id: '7sus2', name: '7sus2', intervals: [0,2,7,10], score: 12 },
                 
-                // Familia Sin 5ta (no5) y variantes de color
+                // Familia Sin 5ta (no5) y variantes de color super comunes en guitarra jazz
                 { id: 'Maj7_no5', name: 'Maj7', intervals: [0,4,11], score: 10 },
                 { id: '7_no5', name: '7', intervals: [0,4,10], score: 10 },
                 { id: 'm7_no5', name: 'm7', intervals: [0,3,10], score: 10 },
@@ -772,14 +774,13 @@
                 { id: '7#9_no5', name: '7(#9)', intervals: [0,3,4,10], score: 13 },
                 { id: '7b9_no5', name: '7(b9)', intervals: [0,1,4,10], score: 13 },
                 { id: 'm11_no5', name: 'm11', intervals: [0,3,5,10], score: 14 },
-                
                 { id: 'Maj7#5_no3', name: 'Maj7(#5)', intervals: [0,8,11], score: 10 },
                 { id: '7#5_no3', name: '7(#5)', intervals: [0,8,10], score: 10 },
                 { id: 'Maj9#5', name: 'Maj9(#5)', intervals: [0,2,4,8,11], score: 14 },
                 { id: 'add9_no5', name: 'add9', intervals: [0,2,4], score: 9 },
                 { id: 'madd9_no5', name: 'm(add9)', intervals: [0,2,3], score: 9 },
                 
-                // Variaciones complejas 6/9
+                // Variaciones complejas 6/9 y #11
                 { id: '6/9#11', name: '6/9(#11)', intervals: [0,2,4,6,7,9], score: 16 },
                 { id: '6/9#11_no5', name: '6/9(#11)', intervals: [0,2,4,6,9], score: 15 },
                 { id: 'm6/9', name: 'm6/9', intervals: [0,2,3,7,9], score: 14 },
@@ -814,7 +815,7 @@
                         let finalScore = def.score + (bassPC === rootPC ? 5 : 0);
                         let finalDefName = def.name;
                         
-                        // Traducción dinámica de cifrado basado en la intención de la nota (b13 vs #5, #11 vs b5)
+                        // Traducción dinámica de cifrado basado en la intención de la nota
                         const int8 = notes.find(n => (n.note - rootPC + 120) % 12 === 8);
                         if (int8 && int8.explicitEnharmonic === 'flats' && finalDefName.includes('#5')) {
                             finalDefName = finalDefName.replace('#5', 'b13');
