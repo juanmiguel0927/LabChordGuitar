@@ -10,8 +10,9 @@
     <script src="https://unpkg.com/babel-standalone@6/babel.min.js"></script>
     <!-- Tailwind -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- HTML2Canvas & jsPDF -->
+    <!-- HTML2Canvas (Exportación a JPEG Alta Res) -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <!-- jsPDF (Exportación a PDF) -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     
     <style>
@@ -27,7 +28,7 @@
 
         .glass-panel { background: rgba(15, 23, 42, 0.7); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.05); }
 
-        /* Estilos específicos para la exportación a PDF (Fondo blanco absoluto, alto contraste) */
+        /* Estilos específicos para la exportación a PDF para fondo blanco */
         .jpeg-is-exporting {
             width: 1800px !important; 
             max-width: 1800px !important;
@@ -36,9 +37,37 @@
             padding: 60px 80px !important;
             background-color: #ffffff !important; 
             box-sizing: border-box !important;
-            color: #000000 !important;
         }
         
+        .jpeg-is-exporting * {
+            color-adjust: exact !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+        }
+
+        .jpeg-is-exporting .bg-slate-900,
+        .jpeg-is-exporting .bg-\[\#0f172a\] {
+            background-color: #ffffff !important;
+            border-color: #cbd5e1 !important;
+            box-shadow: none !important;
+        }
+
+        .jpeg-is-exporting .text-slate-100, 
+        .jpeg-is-exporting .text-slate-200, 
+        .jpeg-is-exporting .text-slate-300 { color: #000000 !important; }
+        .jpeg-is-exporting .text-slate-400,
+        .jpeg-is-exporting .text-slate-500 { color: #64748b !important; }
+
+        .jpeg-is-exporting .border-slate-800,
+        .jpeg-is-exporting .border-slate-700,
+        .jpeg-is-exporting .border-slate-600 { border-color: #cbd5e1 !important; }
+
+        .jpeg-is-exporting .bg-slate-800 { background-color: #f8fafc !important; border-color: #cbd5e1 !important; }
+        
+        .jpeg-is-exporting .pdf-header h1 { color: #000000 !important; }
+        .jpeg-is-exporting .pdf-header h2 { color: #d97706 !important; }
+        .jpeg-is-exporting .pdf-date { color: #64748b !important; }
+
         .jpeg-is-exporting .print-grid-wrap {
             display: flex !important;
             flex-wrap: wrap !important;
@@ -51,37 +80,6 @@
             flex: 0 0 calc(25% - 50px) !important; 
             max-width: calc(25% - 50px) !important;
         }
-
-        /* Forzar colores claros a oscuros en PDF */
-        .jpeg-is-exporting .bg-slate-900, 
-        .jpeg-is-exporting .bg-slate-800,
-        .jpeg-is-exporting .bg-slate-950,
-        .jpeg-is-exporting .bg-\[\#0f172a\] {
-            background-color: #ffffff !important;
-            border-color: #cbd5e1 !important;
-            box-shadow: none !important;
-        }
-
-        .jpeg-is-exporting .text-slate-100,
-        .jpeg-is-exporting .text-slate-200,
-        .jpeg-is-exporting .text-slate-300,
-        .jpeg-is-exporting .text-white { color: #0f172a !important; }
-        
-        .jpeg-is-exporting .text-slate-400,
-        .jpeg-is-exporting .text-slate-500 { color: #475569 !important; }
-        
-        .jpeg-is-exporting .border-slate-600,
-        .jpeg-is-exporting .border-slate-700,
-        .jpeg-is-exporting .border-slate-800 { border-color: #cbd5e1 !important; border-width: 1.5px !important; }
-
-        /* Cuerdas y Trastes en PDF */
-        .jpeg-is-exporting .bg-slate-400 { background-color: #94a3b8 !important; opacity: 1 !important; }
-        .jpeg-is-exporting .bg-slate-600 { background-color: #cbd5e1 !important; }
-
-        /* Encabezados PDF */
-        .jpeg-is-exporting .pdf-header h1 { color: #000000 !important; }
-        .jpeg-is-exporting .pdf-header h2 { color: #d97706 !important; }
-        .jpeg-is-exporting .pdf-date { color: #64748b !important; }
     </style>
 </head>
 <body class="pb-32">
@@ -128,7 +126,8 @@
                 Image: <g><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></g>,
                 Download: <g><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></g>,
                 Share2: <g><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></g>,
-                UploadCloud: <g><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/><polyline points="16 16 12 12 8 16"/></g>
+                UploadCloud: <g><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/><polyline points="16 16 12 12 8 16"/></g>,
+                Settings: <g><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"></path><circle cx="12" cy="12" r="3"></circle></g>
             };
             return (
                 <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
@@ -221,16 +220,16 @@
             return (
                 <div className="pdf-header text-center mb-10 pt-4" style={{display: 'none'}}>
                     <div className="flex justify-center mb-4 text-amber-500"><Icon name="GraduationCap" size={64} /></div>
-                    <h1 className="text-5xl font-black text-slate-900">Laboratorio de Acordes</h1>
-                    {title && <h2 className="text-2xl font-bold text-amber-600 mt-3">{title}</h2>}
-                    <p className="pdf-date text-slate-500 mt-3 font-bold text-lg"></p>
+                    <h1 className="text-5xl font-black text-slate-100">Laboratorio de Acordes</h1>
+                    {title && <h2 className="text-2xl font-bold text-amber-500 mt-3">{title}</h2>}
+                    <p className="pdf-date text-slate-400 mt-3 font-bold text-lg"></p>
                 </div>
             );
         };
 
         const PdfFooter = function() {
             return (
-                <div className="pdf-footer text-center mt-16 pb-4 border-t-2 border-slate-300 pt-8 w-full" style={{display: 'none'}}>
+                <div className="pdf-footer text-center mt-16 pb-4 border-t-2 border-slate-800 pt-8 w-full" style={{display: 'none'}}>
                     <p className="text-slate-500 font-bold uppercase tracking-widest text-sm">Desarrollado por Juan Miguel Rios Redondo</p>
                 </div>
             );
@@ -458,6 +457,40 @@
             return n.sort((a,b) => a-b);
         };
 
+        const calculateFingering = function(fingering) {
+            if (!fingering || fingering.length === 0) return fingering;
+            let result = fingering.map(f => Object.assign({}, f));
+            
+            // Ordenamos por traste (ascendente) y luego por cuerda (descendente, de grave a aguda)
+            let sorted = [...result].sort((a, b) => {
+                if (a.fret !== b.fret) return a.fret - b.fret;
+                return b.string - a.string;
+            });
+
+            let availableFingers = ['1', '2', '3', '4'];
+            const minFret = sorted[0].fret;
+            const minFretNotes = sorted.filter(n => n.fret === minFret);
+
+            // Detectar posible cejilla o asignar dedo 1 a la(s) nota(s) más grave(s)
+            if (minFretNotes.length > 1) {
+                minFretNotes.forEach(n => { n.finger = '1'; });
+                availableFingers.shift(); // Consumimos el dedo 1
+                sorted = sorted.filter(n => n.fret !== minFret);
+            }
+
+            // Asignamos los dedos restantes secuencialmente a las notas que quedan
+            sorted.forEach(n => {
+                if (availableFingers.length > 0) n.finger = availableFingers.shift();
+                else n.finger = '4'; // Si faltan dedos, reutilizamos el meñique
+            });
+
+            // Mapear de vuelta al orden original
+            return result.map(orig => {
+                const calculated = sorted.find(s => s.string === orig.string && s.fret === orig.fret) || minFretNotes.find(s => s.string === orig.string && s.fret === orig.fret);
+                return Object.assign({}, orig, { finger: calculated ? calculated.finger : orig.finger });
+            });
+        };
+
         const getOptimalFingering = function(baseNotes, bassString, dropType, appTrack) {
             let stringIdx = bassString - 1; 
             let allowedStrings = [5, 4, 3, 2, 1, 0];
@@ -499,7 +532,8 @@
                 let minB = sB.length > 0 ? Math.min.apply(null, sB) : 0;
                 return minA - minB; 
             });
-            return validFingerings[0];
+            // Aplicamos heurística automática antes de devolver
+            return calculateFingering(validFingerings[0]);
         };
 
         const getIntervalDegree = function(noteMidi, rootMidi, quality, explicitEnharmonic) {
@@ -731,6 +765,24 @@
             for(let i=0; i<len; i++) d += Math.abs(sN[i] - tN[i]);
             return d;
         };
+
+        const getIntervalName = function(notes) {
+            if (!notes || notes.length !== 2) return '';
+            const diff = Math.abs(notes[0].note - notes[1].note);
+            const names = {
+                0: 'Unísono', 1: '2da Menor', 2: '2da Mayor', 3: '3ra Menor',
+                4: '3ra Mayor', 5: '4ta Justa', 6: 'Tritono', 7: '5ta Justa',
+                8: '6ta Menor', 9: '6ta Mayor', 10: '7ma Menor', 11: '7ma Mayor',
+                12: 'Octava', 13: '9na Menor', 14: '9na Mayor', 15: '10ma Menor',
+                16: '10ma Mayor', 17: '11na Justa', 18: '11na Aum.',
+                19: '12va Justa', 20: '13ra Menor', 21: '13ra Mayor'
+            };
+            if (names[diff]) return names[diff];
+            const mod = diff % 12;
+            const octaves = Math.floor(diff / 12);
+            const baseNames = ['Unísono', '2da Menor', '2da Mayor', '3ra Menor', '3ra Mayor', '4ta Justa', 'Tritono', '5ta Justa', '6ta Menor', '6ta Mayor', '7ma Menor', '7ma Mayor'];
+            return `${baseNames[mod]} (+${octaves} 8va)`;
+        };
         
         const getQualsForTrack = function(t) { return t === 'triads' ? TRIAD_QUALITIES : t === 'shells' ? SHELL_QUALITIES : t === 'tensions' ? TENSION_QUALITIES : QUAD_QUALITIES; };
         const getDropsForTrack = function(t) { return t === 'triads' ? TRIAD_VOICINGS : t === 'shells' ? SHELL_VOICINGS : t === 'tensions' ? TENSION_VOICINGS : QUAD_VOICINGS; };
@@ -738,14 +790,13 @@
         const Fretboard = function(props) {
             const { fingering, prevFingering, degreeLabel, name, rootMidi, formattedChordName, quality, dropLabel, options, vlRank, isSelected, isLocked, onSelect, onPlay, hideInteractive, distance } = props;
             const [isRevealed, setIsRevealed] = useState(false);
-            const [localLabelMode, setLocalLabelMode] = useState(options.labelMode || 'intervals');
             const [localFingers, setLocalFingers] = useState({});
-
-            // Sincronizar el estado local si cambia el estado global desde la barra inferior
+            const [localLabelMode, setLocalLabelMode] = useState(options.labelMode);
+            
+            useEffect(() => { setIsRevealed(false); }, [fingering, options.blindMode]);
+            useEffect(() => { setLocalFingers({}); }, [fingering]);
             useEffect(() => { setLocalLabelMode(options.labelMode); }, [options.labelMode]);
 
-            useEffect(() => { setIsRevealed(false); setLocalFingers({}); }, [fingering, options.blindMode]);
-            
             if (!fingering) return null;
             const startFret = Math.min(...fingering.map(f => f.fret));
             const endFret = Math.max(...fingering.map(f => f.fret));
@@ -782,6 +833,28 @@
                 return elements;
             };
 
+            const handleNodeClick = function(e, noteData) {
+                e.stopPropagation();
+                if (options.onPlayNote) options.onPlayNote(noteData);
+                if (localLabelMode === 'fingers' || options.labelMode === 'fingers') {
+                    if (localLabelMode !== 'fingers') setLocalLabelMode('fingers');
+                    setLocalFingers(prev => {
+                        const key = `${noteData.string}-${noteData.fret}`;
+                        const current = prev[key] !== undefined ? prev[key] : (noteData.finger || null);
+                        const seq = [null, '1', '2', '3', '4', 'T'];
+                        const nextIdx = (seq.indexOf(current) + 1) % seq.length;
+                        return { ...prev, [key]: seq[nextIdx] };
+                    });
+                }
+            };
+
+            const cycleLocalLabelMode = function(e) {
+                e.stopPropagation();
+                if (localLabelMode === 'intervals') setLocalLabelMode('notes');
+                else if (localLabelMode === 'notes') setLocalLabelMode('fingers');
+                else setLocalLabelMode('intervals');
+            };
+
             const downloadSingle = function(e) {
                 if (e) e.stopPropagation();
                 const node = document.getElementById(props.id);
@@ -789,15 +862,17 @@
                 const originalBg = node.style.backgroundColor;
                 const originalBorder = node.style.border;
                 const originalTransform = node.style.transform;
-                node.style.backgroundColor = '#ffffff'; // Forzar blanco al exportar solo el acorde
+                node.style.backgroundColor = '#ffffff';
                 node.style.border = 'none';
                 node.style.transform = 'none';
-                node.classList.add('jpeg-is-exporting'); // Aplicar reglas PDF de CSS
-
+                node.classList.add('jpeg-is-exporting');
                 const hideEls = node.querySelectorAll('.hide-on-pdf');
                 hideEls.forEach(el => { el.dataset.oldDisplay = el.style.display; el.style.display = 'none'; });
+                
                 window.html2canvas(node, { scale: 3, backgroundColor: '#ffffff', logging: false }).then(canvas => {
-                    node.style.backgroundColor = originalBg; node.style.border = originalBorder; node.style.transform = originalTransform;
+                    node.style.backgroundColor = originalBg; 
+                    node.style.border = originalBorder; 
+                    node.style.transform = originalTransform;
                     node.classList.remove('jpeg-is-exporting');
                     hideEls.forEach(el => { el.style.display = el.dataset.oldDisplay || ''; });
                     const imgData = canvas.toDataURL('image/jpeg', 1.0);
@@ -807,45 +882,28 @@
                 });
             };
 
-            const cycleLocalLabelMode = function(e) {
-                e.stopPropagation();
-                setLocalLabelMode(prev => prev === 'intervals' ? 'notes' : prev === 'notes' ? 'fingers' : 'intervals');
-            };
-
-            const handleNodeClick = function(e, noteData) {
-                e.stopPropagation();
-                if (options.onPlayNote) options.onPlayNote(noteData);
-
-                // Logica para cambiar dedo al hacer click en el circulo (1, 2, 3, 4, T)
-                const key = `${noteData.string}-${noteData.fret}`;
-                const current = localFingers[key] !== undefined ? localFingers[key] : noteData.finger;
-                const seq = [null, '1', '2', '3', '4', 'T'];
-                const nextIdx = (seq.indexOf(current) + 1) % seq.length;
-                const nextFinger = seq[nextIdx];
-                
-                setLocalFingers(prev => Object.assign({}, prev, { [key]: nextFinger }));
-                if (options.onUpdateFinger) options.onUpdateFinger(noteData.string, noteData.fret, nextFinger);
-            };
-
             return (
-                <div onClick={!isLocked ? onSelect : undefined} id={props.id} className={"bg-slate-900 p-4 sm:p-5 rounded-2xl border transition-all duration-300 min-w-[240px] w-full max-w-[280px] sm:max-w-[300px] shrink-0 shadow-lg relative flex flex-col print:border-none print:shadow-none print:bg-transparent " + (!hideInteractive && !isLocked && onSelect ? 'cursor-pointer hover:border-amber-500/50 hover:shadow-amber-500/10 group ' : '') + (isSelected ? 'border-amber-500 ring-2 ring-amber-500/30 bg-slate-800 transform scale-[1.02] ' : 'border-slate-800 ') + (isLocked ? 'opacity-40 grayscale pointer-events-none ' : '')}>
+                <div onClick={!isLocked ? onSelect : undefined} id={props.id} className={"bg-slate-900 p-4 sm:p-5 rounded-2xl border transition-all duration-300 min-w-[240px] w-full max-w-[280px] sm:max-w-[300px] shrink-0 shadow-lg relative flex flex-col print:border-none print:shadow-none print:bg-transparent print:p-0 " + (!hideInteractive && !isLocked && onSelect ? 'cursor-pointer hover:border-amber-500/50 hover:shadow-amber-500/10 group ' : '') + (isSelected ? 'border-amber-500 ring-2 ring-amber-500/30 bg-slate-800 transform scale-[1.02] ' : 'border-slate-800 ') + (isLocked ? 'opacity-40 grayscale pointer-events-none ' : '')}>
                     {vlRank > 0 && !isSelected && !options.hideRank && (
                         <div className={`absolute top-0 left-1/2 -translate-x-1/2 ${rankStyle} text-[10px] font-black tracking-widest px-3 py-1 rounded-b-lg shadow-md z-30 flex items-center gap-1.5 whitespace-nowrap print:hidden hide-on-pdf`}>
                             {vlRank === 1 ? <Icon name="CheckCircle2" size={12} /> : <Icon name="AlertCircle" size={12}/>} 
                             {rankText} {distance !== undefined && distance !== Infinity ? `(Mov: ${distance})` : ''}
                         </div>
                     )}
+                    
                     {!isLocked && (
                         <div className="absolute top-2 left-2 flex gap-1 z-30 print:hidden hide-on-pdf">
-                            <button onClick={downloadSingle} className="text-slate-500 hover:text-emerald-400 p-1.5 bg-slate-800/80 rounded border border-slate-700 transition-colors" title="Descargar acorde en JPEG">
+                            <button onClick={downloadSingle} className="text-slate-500 hover:text-emerald-400 p-1.5 bg-slate-800/80 rounded border border-slate-700 transition-colors" title="Descargar JPEG">
                                 <Icon name="Download" size={12}/>
                             </button>
-                            <button onClick={cycleLocalLabelMode} className="text-slate-500 hover:text-amber-400 p-1.5 bg-slate-800/80 rounded border border-slate-700 transition-colors" title="Cambiar Grados/Notas/Dedos en este acorde">
-                                <Icon name="Layers" size={12}/>
+                            <button onClick={cycleLocalLabelMode} className="text-slate-500 hover:text-amber-500 p-1.5 bg-slate-800/80 rounded border border-slate-700 transition-colors flex items-center justify-center font-black text-[9px]" title="Cambiar Grados/Notas/Dedos individualmente">
+                                {localLabelMode === 'intervals' ? 'G' : localLabelMode === 'notes' ? 'N' : 'D'}
                             </button>
                         </div>
                     )}
+
                     {isLocked && <div className="absolute inset-0 z-40 flex items-center justify-center print:hidden"><Icon name="Lock" size={32} className="text-white/40" /></div>}
+                    
                     {options.isBuilder && (
                         <div className="absolute top-2 right-2 flex justify-center gap-1 mb-2 print:hidden hide-on-pdf z-30">
                             <button onClick={e => { e.stopPropagation(); if(options.onEdit) options.onEdit(); }} className="text-slate-400 hover:text-amber-500 text-[9px] uppercase font-bold flex items-center gap-1 transition-colors bg-slate-800/80 px-2 py-1.5 rounded border border-slate-700">
@@ -859,11 +917,11 @@
 
                     <div className={"flex justify-between items-start mb-4 z-10 shrink-0 " + (options.isBuilder ? "mt-4" : "mt-2")}>
                         <div className={"flex flex-col transition-all duration-300 " + (isBlind ? "opacity-20 blur-sm select-none" : "opacity-100")}>
-                            <h3 className="text-slate-100 font-black text-xl tracking-tight leading-none pr-4">
+                            <h3 className="text-slate-100 font-black text-2xl tracking-tight leading-none pr-4">
                                 <ChordNameDisplay name={formattedChordName} />
                             </h3>
-                            <span className="text-amber-500 text-[10px] font-bold tracking-widest mt-2">{name}</span>
-                            <span className="text-slate-500 text-[9px] mt-0.5">{dropLabel}</span>
+                            <span className="text-amber-500 text-xs font-black tracking-widest mt-2">{name}</span>
+                            <span className="text-slate-500 text-[10px] mt-0.5">{dropLabel}</span>
                         </div>
                         {!hideInteractive && !isLocked && (
                             <button onClick={e => { e.stopPropagation(); onPlay(fingering); }} className={"bg-slate-800 hover:bg-amber-500 hover:text-slate-900 rounded-full transition-all text-slate-300 shadow-md shrink-0 ml-1 print:hidden group-hover:bg-slate-700 z-20 relative hide-on-pdf " + (options.isBuilder ? 'p-2' : 'p-2.5 ml-2')}>
@@ -872,16 +930,16 @@
                         )}
                     </div>
 
-                    <div className="relative flex-1 flex justify-center items-center py-6 w-full pl-14 pr-4">
-                        <div className={"relative flex justify-between w-full max-w-[140px] border border-slate-600 bg-slate-800 shadow-inner rounded-sm print:bg-transparent print:border-slate-500 print:shadow-none transition-all duration-500 " + (isBlind ? "filter blur-md grayscale" : "")} style={{ height: (160 * (numFrets / 5)) + 'px', minHeight: (160 * (numFrets / 5)) + 'px' }}>
+                    <div className="relative flex-1 flex justify-center items-center py-6 w-full pl-16 pr-4">
+                        <div className={"relative flex justify-between w-full max-w-[140px] border border-slate-600 bg-slate-800 shadow-inner rounded-sm print:bg-transparent print:border-slate-400 print:shadow-none transition-all duration-500 " + (isBlind ? "filter blur-md grayscale" : "")} style={{ height: (160 * (numFrets / 5)) + 'px', minHeight: (160 * (numFrets / 5)) + 'px' }}>
                             {renderMarkers()}
                             
-                            <div className="absolute -left-12 sm:-left-16 text-amber-500 font-black text-[13px] sm:text-[15px] bg-slate-900/80 border border-slate-700 rounded print:text-amber-600 print:bg-transparent print:border-none z-10 shadow-md print:shadow-none flex items-center justify-center" style={{ top: (0.5 / numFrets * 100) + '%', transform: 'translateY(-50%)', width: '42px', height: '28px' }}>
-                                <span className="leading-none whitespace-nowrap" style={{ marginTop: '-4px' }}>{startFret}fr</span>
+                            <div className="absolute -left-16 text-amber-500 font-black text-sm bg-slate-900 border border-slate-700 rounded print:text-amber-500 print:bg-slate-800 print:border-slate-500 z-10 text-center shadow-md flex items-center justify-center" style={{ top: (0.5 / numFrets * 100) + '%', transform: 'translateY(-50%)', width: '42px', height: '24px' }}>
+                                <span style={{ marginTop: '-5px' }}>{startFret}fr</span>
                             </div>
                             
-                            {stringsArray.map(sIdx => <div key={sIdx} className="w-[1.5px] bg-slate-400 opacity-60 h-full relative print:bg-slate-500 z-0" />)}
-                            {fretsArray.map(i => <div key={i} className="absolute w-full bg-slate-600 shadow-[0_1px_1px_rgba(0,0,0,0.2)] print:bg-slate-500 print:shadow-none z-0" style={{ height: '2px', top: i === numFrets ? 'calc(100% - 2px)' : (i / numFrets * 100) + '%' }} />)}
+                            {stringsArray.map(sIdx => <div key={sIdx} className="w-[1.5px] bg-slate-400 opacity-60 h-full relative print:bg-slate-400 z-0" />)}
+                            {fretsArray.map(i => <div key={i} className="absolute w-full bg-slate-600 shadow-[0_1px_1px_rgba(0,0,0,0.2)] print:bg-slate-400 print:shadow-none z-0" style={{ height: '2px', top: i === numFrets ? 'calc(100% - 2px)' : (i / numFrets * 100) + '%' }} />)}
                             
                             {!isBlind && options.showScales && fretsArray.map(fretIdx => {
                                 const actualFret = startFret + fretIdx;
@@ -898,8 +956,8 @@
                                             const displayLabelScale = localLabelMode === 'intervals' ? displayDegree : noteNames[noteMidi % 12];
                                             let bgClass = scaleNote.t ? 'bg-fuchsia-600 border border-fuchsia-400 shadow-[0_0_8px_rgba(217,70,239,0.6)]' : 'bg-indigo-600 border border-indigo-400 shadow-[0_0_8px_rgba(99,102,241,0.6)]';
                                             return (
-                                                <div key={`sc-${actualFret}-${sNum}`} className={`absolute w-[22px] h-[22px] -ml-[11px] -mt-[11px] rounded-full text-white print:hidden z-10 pointer-events-none flex items-center justify-center ${bgClass}`} style={{ left: (stringsArray.indexOf(sNum) / 5 * 100) + '%', top: ((actualFret - startFret + 0.5) / numFrets * 100) + '%' }}>
-                                                    <span className="font-black text-[9px] leading-none whitespace-nowrap" style={{ marginTop: '-3px' }}>{displayLabelScale}</span>
+                                                <div key={`sc-${actualFret}-${sNum}`} className={`absolute w-6 h-6 -ml-3 -mt-3 rounded-full text-white print:hidden z-10 pointer-events-none text-center font-black text-[10px] ${bgClass}`} style={{ left: (stringsArray.indexOf(sNum) / 5 * 100) + '%', top: ((actualFret - startFret + 0.5) / numFrets * 100) + '%', lineHeight: '24px' }}>
+                                                    <span style={{ marginTop: '-5px', display: 'inline-block' }}>{displayLabelScale}</span>
                                                 </div>
                                             );
                                         }
@@ -917,7 +975,7 @@
                                         if (!isFingered) {
                                             return (
                                                 <div key={`rt-${actualFret}-${sNum}`} className="absolute w-[18px] h-[18px] -ml-[9px] -mt-[9px] rounded-sm border border-rose-500/60 bg-rose-500/10 print:hidden z-0 pointer-events-none text-rose-400 flex items-center justify-center" style={{ left: (stringsArray.indexOf(sNum) / 5 * 100) + '%', top: ((actualFret - startFret + 0.5) / numFrets * 100) + '%' }}>
-                                                    <span className="font-black text-[8px] leading-none" style={{ marginTop: '-2px' }}>R</span>
+                                                    <span className="font-black text-[9px]" style={{ marginTop: '-3px' }}>R</span>
                                                 </div>
                                             );
                                         }
@@ -927,7 +985,7 @@
 
                             {!isBlind && options.showGhostNotes && prevFingering && prevFingering.map((noteData, i) => {
                                 if (noteData.fret >= startFret - 1 && noteData.fret <= startFret + numFrets) {
-                                    return <div key={'prev'+i} className="absolute w-6 h-6 -ml-3 -mt-3 rounded-full border-[3px] border-sky-400/60 bg-transparent z-10 print:hidden pointer-events-none shadow-[0_0_10px_rgba(56,189,248,0.5)]" style={{ left: (stringsArray.indexOf(noteData.string) / 5 * 100) + '%', top: ((noteData.fret - startFret + 0.5) / numFrets * 100) + '%' }} />;
+                                    return <div key={'prev'+i} className="absolute w-7 h-7 -ml-3.5 -mt-3.5 rounded-full border-[3px] border-sky-400/60 bg-transparent z-10 print:hidden pointer-events-none shadow-[0_0_10px_rgba(56,189,248,0.5)]" style={{ left: (stringsArray.indexOf(noteData.string) / 5 * 100) + '%', top: ((noteData.fret - startFret + 0.5) / numFrets * 100) + '%' }} />;
                                 } return null;
                             })}
 
@@ -938,25 +996,23 @@
                                 if (options.tensionNotation && isTension) degree = degree.replace('2', '9').replace('4', '11').replace('6', '13');
                                 
                                 const activeFinger = localFingers[`${noteData.string}-${noteData.fret}`] !== undefined ? localFingers[`${noteData.string}-${noteData.fret}`] : noteData.finger;
-
+                                
                                 let displayLabel = '';
                                 if (localLabelMode === 'fingers') {
                                     displayLabel = activeFinger || '';
-                                } else if (localLabelMode === 'intervals') {
-                                    displayLabel = degree;
                                 } else {
-                                    displayLabel = (
+                                    displayLabel = localLabelMode === 'intervals' ? degree : (
                                         noteData.explicitEnharmonic ? 
                                         (noteData.explicitEnharmonic === 'flats' ? MIDI_TO_NOTE_FLAT[noteData.note%12] : MIDI_TO_NOTE_SHARP[noteData.note%12]) 
                                         : noteNames[noteData.note % 12]
                                     );
                                 }
 
-                                let colorClass = isRoot ? 'bg-amber-500 text-slate-950 border-amber-400 print:bg-amber-500 print:text-black print:border-amber-400' : isTension ? 'bg-slate-900 text-fuchsia-400 border-fuchsia-500 print:bg-white print:text-fuchsia-600 print:border-fuchsia-500' : 'bg-slate-900 text-slate-100 border-slate-600 print:bg-white print:text-slate-800 print:border-slate-500';
+                                let colorClass = isRoot ? 'bg-amber-500 text-slate-950 border-amber-400 print:bg-amber-500 print:text-white print:border-amber-400' : isTension ? 'bg-slate-900 text-fuchsia-400 border-fuchsia-500 print:bg-white print:text-fuchsia-600 print:border-fuchsia-500' : 'bg-slate-900 text-slate-100 border-slate-600 print:bg-white print:text-slate-700 print:border-slate-400';
                                 
                                 return (
-                                    <div key={i} onClick={e => handleNodeClick(e, noteData)} className={`absolute w-8 h-8 -ml-4 -mt-4 rounded-full z-20 border-2 shadow-lg cursor-pointer hover:scale-[1.25] transition-transform flex items-center justify-center ${colorClass}`} style={{ left: (stringsArray.indexOf(noteData.string) / 5 * 100) + '%', top: ((noteData.fret - startFret + 0.5) / numFrets * 100) + '%' }}>
-                                        <span className="font-black text-[11px] leading-none whitespace-nowrap" style={{ marginTop: '-4px' }}>{displayLabel}</span>
+                                    <div key={i} onClick={e => handleNodeClick(e, noteData)} className={`absolute w-8 h-8 -ml-4 -mt-4 rounded-full z-20 border-[1.5px] shadow-lg cursor-pointer hover:scale-[1.25] transition-transform text-center font-black text-xs ${colorClass}`} style={{ left: (stringsArray.indexOf(noteData.string) / 5 * 100) + '%', top: ((noteData.fret - startFret + 0.5) / numFrets * 100) + '%', lineHeight: '30px' }}>
+                                        <span style={{ marginTop: '-5px', display: 'inline-block' }}>{displayLabel}</span>
                                     </div>
                                 );
                             })}
@@ -971,7 +1027,7 @@
             );
         };
 
-        const InteractiveFretboard = function({ selectedNotes, onToggleNote, leftHanded, notationMode }) {
+        const InteractiveFretboard = function({ selectedNotes, onToggleNote, onUpdateFinger, leftHanded, notationMode }) {
             const numFrets = 15;
             const stringsArray = leftHanded ? [0, 1, 2, 3, 4, 5] : [5, 4, 3, 2, 1, 0];
             const fretsArray = []; for(let i=0; i<=numFrets; i++) fretsArray.push(i);
@@ -979,7 +1035,7 @@
             const noteNamesAngloFlat = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B'];
             const noteNamesLatinSharp = ['Do', 'Do#', 'Re', 'Re#', 'Mi', 'Fa', 'Fa#', 'Sol', 'Sol#', 'La', 'La#', 'Si'];
             const noteNamesLatinFlat = ['Do', 'Reb', 'Re', 'Mib', 'Mi', 'Fa', 'Solb', 'Sol', 'Lab', 'La', 'Sib', 'Si'];
-            
+
             const [focusedKey, setFocusedKey] = useState(null);
             const containerRef = useRef(null);
 
@@ -988,51 +1044,47 @@
                     e.preventDefault();
                     if (selectedNotes.length === 0) return;
                     if (!focusedKey) { setFocusedKey(`${selectedNotes[0].string}-${selectedNotes[0].fret}`); return; }
-                    
                     const [curS, curF] = focusedKey.split('-').map(Number);
                     let bestMatch = null; let minDistance = Infinity;
-                    
                     selectedNotes.forEach(n => {
                         if (n.string === curS && n.fret === curF) return;
                         let dx = stringsArray.indexOf(n.string) - stringsArray.indexOf(curS);
                         let dy = n.fret - curF;
                         let valid = false;
-                        
                         if (e.key === 'ArrowRight' && dx > 0) valid = true;
                         if (e.key === 'ArrowLeft' && dx < 0) valid = true;
                         if (e.key === 'ArrowDown' && dy > 0) valid = true;
                         if (e.key === 'ArrowUp' && dy < 0) valid = true;
-                        
                         if (valid) {
                             let dist = Math.sqrt(dx*dx + dy*dy);
                             if (dist < minDistance) { minDistance = dist; bestMatch = n; }
                         }
                     });
                     if (bestMatch) setFocusedKey(`${bestMatch.string}-${bestMatch.fret}`);
-                }
-                else if (['1','2','3','4','t','T'].includes(e.key) && onToggleNote && focusedKey) {
+                } else if (['1','2','3','4','T'].includes(e.key) && focusedKey && onUpdateFinger) {
+                    e.preventDefault();
                     const [curS, curF] = focusedKey.split('-').map(Number);
-                    const isSelectedNote = selectedNotes.find(n => n.string === curS && n.fret === curF);
-                    if (isSelectedNote) onToggleNote(curS, curF, isSelectedNote.note, isSelectedNote, e.key.toUpperCase());
-                }
-                else if (['Backspace', 'Delete'].includes(e.key) && onToggleNote && focusedKey) {
+                    onUpdateFinger(curS, curF, e.key);
+                } else if (['Backspace', 'Delete'].includes(e.key) && focusedKey && onUpdateFinger) {
+                    e.preventDefault();
                     const [curS, curF] = focusedKey.split('-').map(Number);
-                    const isSelectedNote = selectedNotes.find(n => n.string === curS && n.fret === curF);
-                    if (isSelectedNote) onToggleNote(curS, curF, isSelectedNote.note, isSelectedNote, null);
+                    onUpdateFinger(curS, curF, null);
                 }
             };
 
             const handleNoteClick = (sNum, fret, noteMidi, isSelectedNote) => {
-                if (onToggleNote) onToggleNote(sNum, fret, noteMidi, isSelectedNote);
-                setFocusedKey(`${sNum}-${fret}`);
+                onToggleNote(sNum, fret, noteMidi, isSelectedNote);
+                if (!isSelectedNote) setFocusedKey(`${sNum}-${fret}`);
+                else if (focusedKey === `${sNum}-${fret}`) setFocusedKey(null);
+                else setFocusedKey(`${sNum}-${fret}`);
             };
 
             return (
                 <div 
                     ref={containerRef}
-                    tabIndex="0"
+                    tabIndex={0}
                     onKeyDown={handleKeyDown}
-                    className="relative flex justify-between w-full max-w-[200px] border-4 border-[#1a1511] bg-[#2a241e] shadow-[inset_0_0_12px_rgba(0,0,0,0.9)] rounded-md transition-all mx-auto ml-6 md:ml-8 focus:outline-none focus:ring-4 focus:ring-amber-500/50" 
+                    className="relative flex justify-between w-full max-w-[200px] border-4 border-[#1a1511] bg-[#2a241e] shadow-[inset_0_0_12px_rgba(0,0,0,0.9)] rounded-md transition-all mx-auto ml-6 md:ml-8 focus:outline-none focus:ring-4 ring-amber-500/50" 
                     style={{ height: '480px' }}
                 >
                     {fretsArray.map(fret => {
@@ -1060,12 +1112,12 @@
                         }
                         const topPos = fret === 0 ? 0 : (fret - 0.5) / numFrets * 100;
                         const isFocused = focusedKey === `${sNum}-${fret}`;
-
+                        
                         return (
-                            <div key={`grid-${fret}-${sNum}`} onClick={() => handleNoteClick(sNum, fret, noteMidi, isSelectedNote)} className={`absolute w-8 h-8 -ml-4 -mt-4 cursor-pointer z-20 rounded-full hover:bg-white/10 transition-colors ${isFocused ? 'ring-2 ring-white bg-white/10' : ''}`} style={{ left: `${(stringsArray.indexOf(sNum) / 5) * 100}%`, top: `${topPos}%` }}>
+                            <div key={`grid-${fret}-${sNum}`} onClick={() => handleNoteClick(sNum, fret, noteMidi, isSelectedNote)} className={`absolute w-8 h-8 -ml-4 -mt-4 cursor-pointer flex items-center justify-center z-20 rounded-full hover:bg-white/10 transition-colors ${isFocused ? 'ring-2 ring-white bg-white/10' : ''}`} style={{ left: `${(stringsArray.indexOf(sNum) / 5) * 100}%`, top: `${topPos}%` }}>
                                 {isSelectedNote && (
-                                    <div className="w-6 h-6 rounded-full bg-amber-500 text-slate-950 border border-amber-300 shadow-[0_0_10px_rgba(245,158,11,0.8)] absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center justify-center">
-                                        <span className="font-black text-[10px] leading-none whitespace-nowrap" style={{ marginTop: '-2.5px' }}>{isSelectedNote.finger || noteName}</span>
+                                    <div className="w-7 h-7 rounded-full bg-amber-500 text-slate-950 border border-amber-300 shadow-[0_0_10px_rgba(245,158,11,0.8)] text-center font-black text-[9px]" style={{ lineHeight: '26px' }}>
+                                        <span style={{ marginTop: '-5px', display: 'inline-block' }}>{isSelectedNote.finger || noteName}</span>
                                     </div>
                                 )}
                             </div>
@@ -1207,7 +1259,7 @@
 
                 targetEl.classList.add('jpeg-is-exporting');
                 const originalBg = targetEl.style.backgroundColor;
-                targetEl.style.backgroundColor = '#ffffff'; // Forzar blanco puro al contenedor principal
+                targetEl.style.backgroundColor = '#ffffff';
                 
                 const headers = targetEl.querySelectorAll('.pdf-header');
                 const footers = targetEl.querySelectorAll('.pdf-footer');
@@ -1242,14 +1294,9 @@
                 }, 150);
             }
 
-            const toggleNoteLogic = function(sNum, fret, noteMidi, existingNote, setNotesState, fingerToAssign = null) {
+            const toggleNoteLogic = function(sNum, fret, noteMidi, existingNote, setNotesState) {
                 setNotesState(prev => {
                     if (existingNote) {
-                        // Si le pasamos un dedo explicito por teclado, solo actualizar el dedo
-                        if (fingerToAssign !== null) {
-                            return prev.map(n => (n.string === sNum && n.fret === fret) ? Object.assign({}, n, { finger: fingerToAssign }) : n);
-                        }
-
                         const isAccidental = [1, 3, 6, 8, 10].indexOf(noteMidi % 12) !== -1;
                         if (isAccidental) {
                             if (existingNote.explicitEnharmonic === 'sharps') {
@@ -1262,7 +1309,7 @@
                         }
                     }
                     const isAccidental = [1, 3, 6, 8, 10].indexOf(noteMidi % 12) !== -1;
-                    return [...prev, { string: sNum, fret: fret, note: noteMidi, explicitEnharmonic: isAccidental ? 'sharps' : null, finger: fingerToAssign }];
+                    return [...prev, { string: sNum, fret: fret, note: noteMidi, explicitEnharmonic: isAccidental ? 'sharps' : null, finger: null }];
                 });
                 playSingleNote({ note: noteMidi });
             };
@@ -1271,19 +1318,8 @@
                 setCustomNotes(prev => prev.map(n => (n.string === string && n.fret === fret) ? Object.assign({}, n, { finger: finger }) : n));
             };
 
-            function toggleReverseNote(sNum, fret, noteMidi, existingNote, finger = null) { toggleNoteLogic(sNum, fret, noteMidi, existingNote, setReverseNotes, finger); }
-            function handleToggleCustomNote(sNum, fret, noteMidi, existingNote, finger = null) { toggleNoteLogic(sNum, fret, noteMidi, existingNote, setCustomNotes, finger); }
-
-            const getIntervalName = function(notes) {
-                const sorted = [...notes].sort((a,b) => a.note - b.note);
-                const diff = sorted[1].note - sorted[0].note;
-                const intervals = {
-                    0: 'Unísono', 1: '2da menor (b2)', 2: '2da Mayor (2)', 3: '3ra menor (b3)', 4: '3ra Mayor (3)', 5: '4ta Justa (4)', 6: 'Tritono (b5/#4)', 7: '5ta Justa (5)',
-                    8: '6ta menor (b6)', 9: '6ta Mayor (6)', 10: '7ma menor (b7)', 11: '7ma Mayor (Maj7)', 12: 'Octava Perfecta (8va)', 13: '9na menor (b9)', 14: '9na Mayor (9)', 15: '9na Aumentada (#9)',
-                    16: '10ma Mayor', 17: '11na Justa (11)', 18: '11na Aumentada (#11)', 19: '5ta Justa (8va arriba)', 20: '13ra menor (b13)', 21: '13ra Mayor (13)', 22: '7ma menor (8va arriba)', 23: '7ma Mayor (8va arriba)', 24: 'Doble Octava'
-                };
-                return intervals[diff] || `Distancia de ${diff} semitonos`;
-            };
+            function toggleReverseNote(sNum, fret, noteMidi, existingNote) { toggleNoteLogic(sNum, fret, noteMidi, existingNote, setReverseNotes); }
+            function handleToggleCustomNote(sNum, fret, noteMidi, existingNote) { toggleNoteLogic(sNum, fret, noteMidi, existingNote, setCustomNotes); }
 
             const activePlan = appTrack === 'triads' ? STUDY_PLAN_TRIADS : appTrack === 'shells' ? STUDY_PLAN_SHELLS : appTrack === 'tensions' ? STUDY_PLAN_TENSIONS : STUDY_PLAN_QUADS;
             const activeQuals = getQualsForTrack(appTrack || 'quads');
@@ -1768,6 +1804,7 @@
                                     <div><h3 className="font-bold text-white text-base mb-1">1. El Algoritmo Estricto</h3><p>La aplicación restringe matemáticamente la apertura de los dedos a un máximo de <strong>5 trastes</strong> (6 para Doble Drop). Jamás te sugerirá posiciones imposibles ni utilizará cuerdas al aire. Te forzará a usar posiciones móviles.</p></div>
                                     <div><h3 className="font-bold text-white text-base mb-1">2. Fases de Entrenamiento</h3><p>Al iniciar un nivel en <strong>Estudio Guiado</strong>, el sistema te forzará a dominar esa inversión en los escenarios más comunes del Jazz, en este orden:</p><ul className="list-disc pl-5 mt-2 space-y-1 text-slate-400"><li><strong className="text-amber-400">Fase 1:</strong> Progresión II-V-I Mayor.</li><li><strong className="text-amber-400">Fase 2:</strong> Progresión II-V-I Menor.</li><li><strong className="text-amber-400">Fase 3:</strong> Círculo de Cuartas Mayor.</li><li><strong className="text-amber-400">Fase 4:</strong> Círculo de Cuartas Menor.</li></ul></div>
                                     <div><h3 className="font-bold text-white text-base mb-1">3. Voice Leading (Visión de Rayos X)</h3><p>Ahora, en cada acorde posterior al primero, notarás <strong className="text-sky-400">círculos celestes fantasmas</strong>. Éstos te indican dónde se encontraban tus dedos en el acorde anterior, entrenando tu cerebro para ver la guitarra como voces que se mueven (Voice Leading) en vez de bloques estáticos.</p></div>
+                                    <div><h3 className="font-bold text-white text-base mb-1">4. Digitación Heurística (Dedos)</h3><p>El sistema te sugerirá automáticamente con qué dedos tocar (1, 2, 3, 4). Si deseas usar otra postura, simplemente <strong>haz clic en el círculo correspondiente</strong> en cualquier diagrama para alternar entre los dedos disponibles (1, 2, 3, 4, T) a tu conveniencia.</p></div>
                                     <button onClick={() => setShowHelp(false)} className="w-full mt-4 bg-slate-800 hover:bg-slate-700 text-white font-bold py-3 rounded-xl transition-colors">Entendido</button>
                                 </div>
                             </div>
@@ -1957,7 +1994,7 @@
                                                             let dropObj = activeDrops.find(d => d.id === o.drop);
                                                             return (
                                                                 <div key={i} id={"fretboard-wrap-" + i} className={`w-full max-w-[280px] sm:max-w-[300px] shrink-0 print:w-auto print:max-w-none print:break-inside-avoid break-inside-avoid transition-all duration-500 ${isSel ? 'opacity-100 scale-100' : 'opacity-30 scale-95'}`}>
-                                                                    <Fretboard {...o} id={"fb-study-" + i} dropLabel={dropObj?dropObj.short:''} degreeLabel={studyChords[i] ? studyChords[i].label : ''} options={{labelMode, leftHanded: false, blindMode, showGhostNotes, showScales, showRootOverlay, tensionNotation, notationMode, onPlayNote: playSingleNote}} vlRank={studyPhaseIdx !== undefined ? 1 : o.vlRank} distance={o.dist} isSelected={isSel} onSelect={() => { if(!isPlaying){ setStudyProgressionStep(i); playVoicing(o.fingering); } }} onPlay={playVoicing} />
+                                                                    <Fretboard {...o} id={"fb-study-" + i} dropLabel={dropObj?dropObj.short:''} degreeLabel={studyChords[i] ? studyChords[i].label : ''} options={{labelMode, leftHanded: false, blindMode, showGhostNotes, showScales, showRootOverlay, tensionNotation, notationMode, onPlayNote: playSingleNote}} vlRank={studyPhaseIdx !== undefined ? 1 : o.vlRank} distance={o.dist} isSelected={isSel} onSelect={() => { if(!isPlaying){ setStudyProgressionStep(i); playVoicing(o.fingering); } }} onPlay={playVoicing} hideInteractive={false} />
                                                                 </div>
                                                             );
                                                         })}
@@ -1990,10 +2027,12 @@
                                             <div className="flex-1 flex flex-col items-center">
                                                 <h3 className="text-xl font-bold text-amber-500 mb-2">Edición Libre (Motor Enarmónico)</h3>
                                                 <p className="text-slate-400 text-xs mb-6 text-center">Toca el diapasón para colocar o quitar notas libremente. El Voice Leading y la identificación se calcularán automáticamente.</p>
-                                                <InteractiveFretboard selectedNotes={customNotes} onToggleNote={handleToggleCustomNote} leftHanded={leftHanded} notationMode={notationMode} />
+                                                <InteractiveFretboard selectedNotes={customNotes} onToggleNote={handleToggleCustomNote} onUpdateFinger={handleFingerChange} leftHanded={leftHanded} notationMode={notationMode} />
                                                 <p className="text-center text-[10px] mt-6 bg-slate-900 p-2.5 rounded-xl border border-slate-800 text-slate-400 w-full max-w-[280px]">
-                                                    <span className="text-amber-500 font-bold block mb-1 uppercase tracking-widest text-[9px]">Instrucciones:</span>
-                                                    Haz clic en una nota activa, o presiona <span className="text-amber-400">1, 2, 3, 4, T</span> mientras está seleccionada para asignar dedo. Usa <span className="text-rose-400">Supr</span> para borrarla.
+                                                    <span className="text-amber-500 font-bold block mb-1 uppercase tracking-widest text-[9px]">Instrucciones del Diapasón:</span>
+                                                    <span className="text-amber-400">Clic/Flechas:</span> Navegar &nbsp;|&nbsp; 
+                                                    <span className="text-amber-400">1,2,3,4,T:</span> Dedo &nbsp;|&nbsp; 
+                                                    <span className="text-rose-400">Supr:</span> Borrar Dedo
                                                 </p>
                                                 <button type="button" onClick={() => { setCustomNotes([]); setCustomRootPC(null); setCustomName(''); }} className="mt-4 bg-rose-500/10 text-rose-500 hover:bg-rose-500 hover:text-white font-bold border border-rose-500/30 px-4 py-2 rounded-xl flex items-center justify-center gap-2 w-full max-w-[280px] transition-colors">
                                                     <Icon name="Trash2" size={14}/> Borrar Todo
@@ -2023,17 +2062,26 @@
 
                                                 {customNotes.length > 0 && (
                                                     <div className="mb-4 bg-slate-900/50 p-3 rounded-xl border border-slate-800">
-                                                        <label className="text-[10px] uppercase font-bold text-amber-500 mb-2 block tracking-widest">2. Asigna Dedos (Opcional)</label>
-                                                        <div className="flex flex-row justify-between items-center gap-2 overflow-x-auto pb-2">
-                                                            {[...customNotes].sort((a,b) => b.string - a.string).map(n => {
-                                                                const stringNum = 6 - n.string; // 5 -> 6, 0 -> 1
+                                                        <label className="text-[10px] uppercase font-bold text-amber-500 mb-2 block tracking-widest flex items-center justify-between">
+                                                            <span>2. Asigna Dedos (Opcional)</span>
+                                                            <span className="text-slate-500 text-[8px]">C.6 ➝ C.1</span>
+                                                        </label>
+                                                        <div className="flex items-center justify-start gap-1 overflow-x-auto pb-1 no-scrollbar">
+                                                            {[5, 4, 3, 2, 1, 0].map(sNum => {
+                                                                const n = customNotes.find(note => note.string === sNum);
+                                                                if (!n) return null;
+                                                                
+                                                                const pref = n.explicitEnharmonic || 'sharps';
+                                                                const namesArray = notationMode === 'latin' ? (pref === 'flats' ? MIDI_TO_NOTE_FLAT : MIDI_TO_NOTE_SHARP).map(k => translateNote(k, 'latin')) : (pref === 'flats' ? MIDI_TO_NOTE_FLAT : MIDI_TO_NOTE_SHARP);
+                                                                const noteName = namesArray[n.note % 12];
+                                                                
                                                                 return (
-                                                                    <div key={`${n.string}-${n.fret}`} className="flex flex-col items-center bg-slate-800 p-2 rounded-lg border border-slate-700 min-w-[50px]">
-                                                                        <span className="text-[10px] text-slate-400 font-bold mb-1">C.{stringNum}</span>
+                                                                    <div key={`finger-assign-${sNum}`} className="flex flex-col items-center bg-slate-800 p-1.5 rounded-lg border border-slate-700 min-w-[36px]">
+                                                                        <span className="text-[9px] text-slate-400 font-bold mb-1">{noteName}</span>
                                                                         <select
                                                                             value={n.finger || ''}
                                                                             onChange={e => handleFingerChange(n.string, n.fret, e.target.value)}
-                                                                            className="bg-slate-900 border border-slate-600 text-amber-500 rounded p-1 text-xs outline-none font-bold w-full text-center"
+                                                                            className="bg-slate-900 border border-slate-600 text-amber-500 rounded p-1 text-xs outline-none font-black w-full text-center appearance-none"
                                                                         >
                                                                             <option value="">-</option>
                                                                             <option value="1">1</option>
@@ -2043,7 +2091,7 @@
                                                                             <option value="T">T</option>
                                                                         </select>
                                                                     </div>
-                                                                )
+                                                                );
                                                             })}
                                                         </div>
                                                     </div>
