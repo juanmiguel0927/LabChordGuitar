@@ -28,14 +28,21 @@
 
         .glass-panel { background: rgba(15, 23, 42, 0.7); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.05); }
 
+        /* Estilos específicos para la exportación a PDF para fondo blanco */
         .jpeg-is-exporting {
             width: 1800px !important; 
             max-width: 1800px !important;
             min-width: 1800px !important;
             margin: 0 auto !important;
             padding: 60px 80px !important;
-            background-color: #020617 !important;
+            background-color: #ffffff !important;
             box-sizing: border-box !important;
+        }
+        
+        .jpeg-is-exporting * {
+            color-adjust: exact !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
         }
         
         .jpeg-is-exporting .print-grid-wrap {
@@ -50,6 +57,21 @@
             flex: 0 0 calc(25% - 50px) !important; 
             max-width: calc(25% - 50px) !important;
         }
+
+        .jpeg-is-exporting .bg-slate-900, .jpeg-is-exporting .bg-\[\#0f172a\] { background-color: #ffffff !important; border-color: #cbd5e1 !important; color: #000000 !important; }
+        .jpeg-is-exporting .bg-slate-800 { background-color: #f8f9fa !important; border-color: #cbd5e1 !important; }
+        .jpeg-is-exporting .text-slate-100 { color: #000000 !important; }
+        .jpeg-is-exporting .text-slate-300 { color: #333333 !important; }
+        .jpeg-is-exporting .text-slate-400, .jpeg-is-exporting .text-slate-500 { color: #64748b !important; }
+        .jpeg-is-exporting .border-slate-600, .jpeg-is-exporting .border-slate-700, .jpeg-is-exporting .border-slate-800 { border-color: #cbd5e1 !important; }
+        .jpeg-is-exporting .bg-slate-600 { background-color: #cbd5e1 !important; } /* Trastes */
+        .jpeg-is-exporting .bg-slate-400 { background-color: #94a3b8 !important; opacity: 1 !important; } /* Cuerdas */
+        .jpeg-is-exporting .text-amber-500 { color: #d97706 !important; }
+        .jpeg-is-exporting .bg-amber-500 { background-color: #d97706 !important; color: #ffffff !important; }
+        
+        .jpeg-is-exporting .pdf-header h1 { color: #000000 !important; }
+        .jpeg-is-exporting .pdf-header h2 { color: #d97706 !important; }
+        .jpeg-is-exporting .pdf-date { color: #64748b !important; }
     </style>
 </head>
 <body class="pb-32">
@@ -706,7 +728,10 @@
         const Fretboard = function(props) {
             const { fingering, prevFingering, degreeLabel, name, rootMidi, formattedChordName, quality, dropLabel, options, vlRank, isSelected, isLocked, onSelect, onPlay, hideInteractive, distance } = props;
             const [isRevealed, setIsRevealed] = useState(false);
+            const [localFingers, setLocalFingers] = useState({});
+
             useEffect(() => { setIsRevealed(false); }, [fingering, options.blindMode]);
+            useEffect(() => { setLocalFingers({}); }, [fingering]);
             
             if (!fingering) return null;
             const startFret = Math.min(...fingering.map(f => f.fret));
@@ -733,15 +758,32 @@
                 markers.forEach(fret => {
                     if (fret >= startFret && fret <= startFret + numFrets - 1) {
                         const topPos = ((fret - startFret + 0.5) / numFrets) * 100;
-                        elements.push(<div key={'dot'+fret} className="absolute w-3 h-3 bg-white/10 rounded-full left-1/2 -translate-x-1/2 print:bg-black/20" style={{ top: topPos + '%', transform: 'translate(-50%, -50%)' }} />);
+                        elements.push(<div key={'dot'+fret} className="absolute w-3 h-3 bg-slate-400/30 rounded-full left-1/2 -translate-x-1/2" style={{ top: topPos + '%', transform: 'translate(-50%, -50%)' }} />);
                     }
                 });
                 if (12 >= startFret && 12 <= startFret + numFrets - 1) {
                     const topPos = ((12 - startFret + 0.5) / numFrets) * 100;
-                    elements.push(<div key="dot12a" className="absolute w-2.5 h-2.5 bg-white/10 rounded-full left-1/3 -translate-x-1/2 print:bg-black/20" style={{ top: topPos + '%', transform: 'translate(-50%, -50%)' }} />);
-                    elements.push(<div key="dot12b" className="absolute w-2.5 h-2.5 bg-white/10 rounded-full left-2/3 -translate-x-1/2 print:bg-black/20" style={{ top: topPos + '%', transform: 'translate(-50%, -50%)' }} />);
+                    elements.push(<div key="dot12a" className="absolute w-2.5 h-2.5 bg-slate-400/30 rounded-full left-1/3 -translate-x-1/2" style={{ top: topPos + '%', transform: 'translate(-50%, -50%)' }} />);
+                    elements.push(<div key="dot12b" className="absolute w-2.5 h-2.5 bg-slate-400/30 rounded-full left-2/3 -translate-x-1/2" style={{ top: topPos + '%', transform: 'translate(-50%, -50%)' }} />);
                 }
                 return elements;
+            };
+
+            const handleNodeClick = function(e, noteData) {
+                e.stopPropagation();
+                if (options.onPlayNote) options.onPlayNote(noteData);
+                
+                if (options.setLabelMode && options.labelMode !== 'fingers') {
+                    options.setLabelMode('fingers');
+                }
+
+                setLocalFingers(prev => {
+                    const key = `${noteData.string}-${noteData.fret}`;
+                    const current = prev[key] !== undefined ? prev[key] : (noteData.finger || null);
+                    const seq = [null, '1', '2', '3', '4', 'T'];
+                    const nextIdx = (seq.indexOf(current) + 1) % seq.length;
+                    return { ...prev, [key]: seq[nextIdx] };
+                });
             };
 
             const downloadSingle = function(e) {
@@ -751,13 +793,15 @@
                 const originalBg = node.style.backgroundColor;
                 const originalBorder = node.style.border;
                 const originalTransform = node.style.transform;
-                node.style.backgroundColor = '#0f172a';
+                node.style.backgroundColor = '#ffffff';
                 node.style.border = 'none';
                 node.style.transform = 'none';
+                node.classList.add('jpeg-is-exporting');
                 const hideEls = node.querySelectorAll('.hide-on-pdf');
                 hideEls.forEach(el => { el.dataset.oldDisplay = el.style.display; el.style.display = 'none'; });
-                window.html2canvas(node, { scale: 3, backgroundColor: '#0f172a', logging: false }).then(canvas => {
+                window.html2canvas(node, { scale: 3, backgroundColor: '#ffffff', logging: false }).then(canvas => {
                     node.style.backgroundColor = originalBg; node.style.border = originalBorder; node.style.transform = originalTransform;
+                    node.classList.remove('jpeg-is-exporting');
                     hideEls.forEach(el => { el.style.display = el.dataset.oldDisplay || ''; });
                     const imgData = canvas.toDataURL('image/jpeg', 1.0);
                     const link = document.createElement('a');
@@ -807,15 +851,15 @@
                     </div>
 
                     <div className="relative flex-1 flex justify-center items-center py-6 w-full pl-14 pr-4">
-                        <div className={"relative flex justify-between w-full max-w-[140px] border border-slate-600 bg-slate-800 shadow-inner rounded-sm print:bg-transparent print:border-slate-500 print:shadow-none transition-all duration-500 " + (isBlind ? "filter blur-md grayscale" : "")} style={{ height: (160 * (numFrets / 5)) + 'px', minHeight: (160 * (numFrets / 5)) + 'px' }}>
+                        <div className={"relative flex justify-between w-full max-w-[140px] border border-slate-600 bg-slate-800 shadow-inner rounded-sm transition-all duration-500 " + (isBlind ? "filter blur-md grayscale" : "")} style={{ height: (160 * (numFrets / 5)) + 'px', minHeight: (160 * (numFrets / 5)) + 'px' }}>
                             {renderMarkers()}
                             
-                            <div className="absolute -left-14 text-amber-500 font-bold text-[11px] bg-slate-900/80 border border-slate-700 rounded print:text-amber-500 print:bg-slate-900 print:border-slate-700 z-10 flex items-center justify-center" style={{ top: (0.5 / numFrets * 100) + '%', transform: 'translateY(-50%)', width: '30px', height: '18px', display: 'table' }}>
-                                <span className="align-middle text-center" style={{ display: 'table-cell', verticalAlign: 'middle', paddingTop: '1px' }}>{startFret}fr</span>
+                            <div className="absolute -left-14 text-amber-500 font-bold text-[12px] bg-slate-900/80 border border-slate-700 rounded z-10 flex items-center justify-center shadow-md" style={{ top: (0.5 / numFrets * 100) + '%', transform: 'translateY(-50%)', width: '32px', height: '22px' }}>
+                                <span className="leading-none">{startFret}fr</span>
                             </div>
                             
-                            {stringsArray.map(sIdx => <div key={sIdx} className="w-[1.5px] bg-slate-400 opacity-60 h-full relative print:bg-slate-500 z-0" />)}
-                            {fretsArray.map(i => <div key={i} className="absolute w-full bg-slate-600 shadow-[0_1px_1px_rgba(0,0,0,0.2)] print:bg-slate-500 print:shadow-none z-0" style={{ height: '2px', top: i === numFrets ? 'calc(100% - 2px)' : (i / numFrets * 100) + '%' }} />)}
+                            {stringsArray.map(sIdx => <div key={sIdx} className="w-[1.5px] bg-slate-400 opacity-60 h-full relative z-0" />)}
+                            {fretsArray.map(i => <div key={i} className="absolute w-full bg-slate-600 shadow-[0_1px_1px_rgba(0,0,0,0.2)] z-0" style={{ height: '2px', top: i === numFrets ? 'calc(100% - 2px)' : (i / numFrets * 100) + '%' }} />)}
                             
                             {!isBlind && options.showScales && fretsArray.map(fretIdx => {
                                 const actualFret = startFret + fretIdx;
@@ -832,8 +876,8 @@
                                             const displayLabelScale = options.labelMode === 'intervals' ? displayDegree : noteNames[noteMidi % 12];
                                             let bgClass = scaleNote.t ? 'bg-fuchsia-600 border border-fuchsia-400 shadow-[0_0_8px_rgba(217,70,239,0.6)]' : 'bg-indigo-600 border border-indigo-400 shadow-[0_0_8px_rgba(99,102,241,0.6)]';
                                             return (
-                                                <div key={`sc-${actualFret}-${sNum}`} className={`absolute w-[22px] h-[22px] -ml-[11px] -mt-[11px] rounded-full text-white print:hidden z-10 pointer-events-none ${bgClass}`} style={{ left: (stringsArray.indexOf(sNum) / 5 * 100) + '%', top: ((actualFret - startFret + 0.5) / numFrets * 100) + '%', display: 'table' }}>
-                                                    <span className="font-black align-middle text-center text-[9px]" style={{ display: 'table-cell', verticalAlign: 'middle', paddingTop: '1px' }}>{displayLabelScale}</span>
+                                                <div key={`sc-${actualFret}-${sNum}`} className={`absolute w-[22px] h-[22px] -ml-[11px] -mt-[11px] rounded-full text-white print:hidden z-10 pointer-events-none flex items-center justify-center ${bgClass}`} style={{ left: (stringsArray.indexOf(sNum) / 5 * 100) + '%', top: ((actualFret - startFret + 0.5) / numFrets * 100) + '%' }}>
+                                                    <span className="font-black text-[9px] leading-none translate-y-[0.5px]">{displayLabelScale}</span>
                                                 </div>
                                             );
                                         }
@@ -850,8 +894,8 @@
                                         const isFingered = fingering.some(f => f.string === sNum && f.fret === actualFret);
                                         if (!isFingered) {
                                             return (
-                                                <div key={`rt-${actualFret}-${sNum}`} className="absolute w-[18px] h-[18px] -ml-[9px] -mt-[9px] rounded-sm border border-rose-500/60 bg-rose-500/10 print:hidden z-0 pointer-events-none text-rose-400" style={{ left: (stringsArray.indexOf(sNum) / 5 * 100) + '%', top: ((actualFret - startFret + 0.5) / numFrets * 100) + '%', display: 'table' }}>
-                                                    <span className="font-black align-middle text-center text-[8px]" style={{ display: 'table-cell', verticalAlign: 'middle' }}>R</span>
+                                                <div key={`rt-${actualFret}-${sNum}`} className="absolute w-[18px] h-[18px] -ml-[9px] -mt-[9px] rounded-sm border border-rose-500/60 bg-rose-500/10 print:hidden z-0 pointer-events-none text-rose-400 flex items-center justify-center" style={{ left: (stringsArray.indexOf(sNum) / 5 * 100) + '%', top: ((actualFret - startFret + 0.5) / numFrets * 100) + '%' }}>
+                                                    <span className="font-black text-[8px] leading-none translate-y-[0.5px]">R</span>
                                                 </div>
                                             );
                                         }
@@ -871,9 +915,11 @@
                                 let isTension = degree.indexOf('2') !== -1 || degree.indexOf('4') !== -1 || degree.indexOf('6') !== -1 || degree.indexOf('9') !== -1 || degree.indexOf('11') !== -1 || degree.indexOf('13') !== -1;
                                 if (options.tensionNotation && isTension) degree = degree.replace('2', '9').replace('4', '11').replace('6', '13');
                                 
+                                const activeFinger = localFingers[`${noteData.string}-${noteData.fret}`] !== undefined ? localFingers[`${noteData.string}-${noteData.fret}`] : noteData.finger;
+
                                 let displayLabel = '';
                                 if (options.labelMode === 'fingers') {
-                                    displayLabel = noteData.finger || '';
+                                    displayLabel = activeFinger || '';
                                 } else {
                                     displayLabel = options.labelMode === 'intervals' ? degree : (
                                         noteData.explicitEnharmonic ? 
@@ -882,11 +928,11 @@
                                     );
                                 }
 
-                                let colorClass = isRoot ? 'bg-amber-500 text-slate-950 border-amber-400 print:bg-amber-500 print:text-black print:border-amber-400' : isTension ? 'bg-slate-900 text-fuchsia-400 border-fuchsia-500 print:bg-slate-900 print:text-fuchsia-400 print:border-fuchsia-500' : 'bg-slate-900 text-slate-100 border-slate-600 print:bg-slate-900 print:text-white print:border-slate-500';
+                                let colorClass = isRoot ? 'bg-amber-500 text-slate-950 border-amber-400' : isTension ? 'bg-slate-900 text-fuchsia-400 border-fuchsia-500' : 'bg-slate-900 text-slate-100 border-slate-600';
                                 
                                 return (
-                                    <div key={i} onClick={e => { e.stopPropagation(); if(options.onPlayNote) options.onPlayNote(noteData); }} className={`absolute w-7 h-7 -ml-3.5 -mt-3.5 rounded-full z-20 border-2 shadow-lg cursor-pointer hover:scale-[1.25] transition-transform ${colorClass}`} style={{ left: (stringsArray.indexOf(noteData.string) / 5 * 100) + '%', top: ((noteData.fret - startFret + 0.5) / numFrets * 100) + '%', display: 'table' }}>
-                                        <span className="font-black align-middle text-center text-[10px]" style={{ display: 'table-cell', verticalAlign: 'middle', paddingTop: '1px' }}>{displayLabel}</span>
+                                    <div key={i} onClick={e => handleNodeClick(e, noteData)} className={`absolute w-8 h-8 -ml-4 -mt-4 rounded-full z-20 border-2 shadow-lg cursor-pointer hover:scale-[1.25] transition-transform flex items-center justify-center ${colorClass}`} style={{ left: (stringsArray.indexOf(noteData.string) / 5 * 100) + '%', top: ((noteData.fret - startFret + 0.5) / numFrets * 100) + '%' }}>
+                                        <span className="font-black text-[11px] leading-none translate-y-[0.5px]">{displayLabel}</span>
                                     </div>
                                 );
                             })}
@@ -901,7 +947,7 @@
             );
         };
 
-        const InteractiveFretboard = function({ selectedNotes, onToggleNote, leftHanded, notationMode }) {
+        const InteractiveFretboard = function({ selectedNotes, onToggleNote, onUpdateFinger, leftHanded, notationMode }) {
             const numFrets = 15;
             const stringsArray = leftHanded ? [0, 1, 2, 3, 4, 5] : [5, 4, 3, 2, 1, 0];
             const fretsArray = []; for(let i=0; i<=numFrets; i++) fretsArray.push(i);
@@ -910,8 +956,70 @@
             const noteNamesLatinSharp = ['Do', 'Do#', 'Re', 'Re#', 'Mi', 'Fa', 'Fa#', 'Sol', 'Sol#', 'La', 'La#', 'Si'];
             const noteNamesLatinFlat = ['Do', 'Reb', 'Re', 'Mib', 'Mi', 'Fa', 'Solb', 'Sol', 'Lab', 'La', 'Sib', 'Si'];
 
+            const [focusedKey, setFocusedKey] = useState(null);
+            const containerRef = useRef(null);
+
+            const handleKeyDown = (e) => {
+                if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
+                    e.preventDefault();
+                    if (selectedNotes.length === 0) return;
+                    if (!focusedKey) {
+                        setFocusedKey(`${selectedNotes[0].string}-${selectedNotes[0].fret}`);
+                        return;
+                    }
+                    
+                    const [curS, curF] = focusedKey.split('-').map(Number);
+                    let bestMatch = null;
+                    let minDistance = Infinity;
+
+                    selectedNotes.forEach(n => {
+                        if (n.string === curS && n.fret === curF) return;
+                        let dx = stringsArray.indexOf(n.string) - stringsArray.indexOf(curS);
+                        let dy = n.fret - curF;
+                        let valid = false;
+                        
+                        if (e.key === 'ArrowRight' && dx > 0) valid = true;
+                        if (e.key === 'ArrowLeft' && dx < 0) valid = true;
+                        if (e.key === 'ArrowDown' && dy > 0) valid = true;
+                        if (e.key === 'ArrowUp' && dy < 0) valid = true;
+
+                        if (valid) {
+                            let dist = Math.sqrt(dx*dx + dy*dy);
+                            if (dist < minDistance) { minDistance = dist; bestMatch = n; }
+                        }
+                    });
+
+                    if (bestMatch) {
+                        setFocusedKey(`${bestMatch.string}-${bestMatch.fret}`);
+                    }
+                } else if (['1','2','3','4','T'].includes(e.key) || e.key === 'Backspace' || e.key === 'Delete') {
+                    if (focusedKey && onUpdateFinger) {
+                        e.preventDefault();
+                        const [curS, curF] = focusedKey.split('-').map(Number);
+                        const finger = ['Backspace', 'Delete'].includes(e.key) ? null : e.key.toUpperCase();
+                        onUpdateFinger(curS, curF, finger);
+                    }
+                }
+            };
+
+            const handleNoteClick = (sNum, fret, noteMidi, isSelectedNote) => {
+                onToggleNote(sNum, fret, noteMidi, isSelectedNote);
+                if (!isSelectedNote) {
+                    setFocusedKey(`${sNum}-${fret}`);
+                    if (containerRef.current) containerRef.current.focus();
+                } else if (focusedKey === `${sNum}-${fret}`) {
+                    setFocusedKey(null);
+                }
+            };
+
             return (
-                <div className="relative flex justify-between w-full max-w-[200px] border-4 border-[#1a1511] bg-[#2a241e] shadow-[inset_0_0_12px_rgba(0,0,0,0.9)] rounded-md transition-all mx-auto ml-6 md:ml-8" style={{ height: '480px' }}>
+                <div 
+                    ref={containerRef}
+                    tabIndex={0}
+                    onKeyDown={handleKeyDown}
+                    className="relative flex justify-between w-full max-w-[200px] border-4 border-[#1a1511] bg-[#2a241e] shadow-[inset_0_0_12px_rgba(0,0,0,0.9)] rounded-md transition-all mx-auto ml-6 md:ml-8 focus:outline-none focus:ring-4 focus:ring-amber-500/50" 
+                    style={{ height: '480px' }}
+                >
                     {fretsArray.map(fret => {
                         if (fret === 0) return null;
                         return <div key={'fn'+fret} className="absolute -left-6 md:-left-8 text-[10px] md:text-xs font-bold text-slate-500 pointer-events-none flex items-center justify-end w-6 pr-1" style={{ top: ((fret - 0.5) / numFrets) * 100 + '%', transform: 'translateY(-50%)' }}>{fret}</div>;
@@ -936,11 +1044,13 @@
                             noteName = namesArray[noteMidi % 12];
                         }
                         const topPos = fret === 0 ? 0 : (fret - 0.5) / numFrets * 100;
+                        const isFocused = focusedKey === `${sNum}-${fret}`;
+                        
                         return (
-                            <div key={`grid-${fret}-${sNum}`} onClick={() => onToggleNote(sNum, fret, noteMidi, isSelectedNote)} className="absolute w-8 h-8 -ml-4 -mt-4 cursor-pointer flex items-center justify-center z-20 rounded-full hover:bg-white/10 transition-colors" style={{ left: `${(stringsArray.indexOf(sNum) / 5) * 100}%`, top: `${topPos}%` }}>
+                            <div key={`grid-${fret}-${sNum}`} onClick={() => handleNoteClick(sNum, fret, noteMidi, isSelectedNote)} className={`absolute w-8 h-8 -ml-4 -mt-4 cursor-pointer flex items-center justify-center z-20 rounded-full hover:bg-white/10 transition-colors ${isFocused ? 'ring-2 ring-white bg-white/10' : ''}`} style={{ left: `${(stringsArray.indexOf(sNum) / 5) * 100}%`, top: `${topPos}%` }}>
                                 {isSelectedNote && (
-                                    <div className="w-6 h-6 rounded-full bg-amber-500 text-slate-950 border border-amber-300 shadow-[0_0_10px_rgba(245,158,11,0.8)] flex items-center justify-center" style={{ display: 'table' }}>
-                                        <span className="font-black align-middle text-center text-[8px]" style={{ display: 'table-cell', verticalAlign: 'middle', paddingTop: '1px' }}>{noteName}</span>
+                                    <div className="w-6 h-6 rounded-full bg-amber-500 text-slate-950 border border-amber-300 shadow-[0_0_10px_rgba(245,158,11,0.8)] flex flex-col items-center justify-center leading-none">
+                                        <span className="font-black text-[9px]">{isSelectedNote.finger || noteName}</span>
                                     </div>
                                 )}
                             </div>
@@ -1082,7 +1192,7 @@
 
                 targetEl.classList.add('jpeg-is-exporting');
                 const originalBg = targetEl.style.backgroundColor;
-                targetEl.style.backgroundColor = '#020617';
+                targetEl.style.backgroundColor = '#ffffff';
                 
                 const headers = targetEl.querySelectorAll('.pdf-header');
                 const footers = targetEl.querySelectorAll('.pdf-footer');
@@ -1097,7 +1207,7 @@
                 hideEls.forEach(n => { n.dataset.originalDisplay = n.style.display; n.style.display = 'none'; });
 
                 setTimeout(() => {
-                    window.html2canvas(targetEl, { scale: 2, useCORS: true, backgroundColor: '#020617', allowTaint: true, logging: false }).then(canvas => {
+                    window.html2canvas(targetEl, { scale: 2, useCORS: true, backgroundColor: '#ffffff', allowTaint: true, logging: false }).then(canvas => {
                         headers.forEach(h => h.style.display = 'none'); footers.forEach(f => f.style.display = 'none');
                         hideEls.forEach(n => n.style.display = n.dataset.originalDisplay || '');
                         targetEl.style.backgroundColor = originalBg; targetEl.classList.remove('jpeg-is-exporting');
@@ -1827,7 +1937,7 @@
                                                             let dropObj = activeDrops.find(d => d.id === o.drop);
                                                             return (
                                                                 <div key={i} id={"fretboard-wrap-" + i} className={`w-full max-w-[280px] sm:max-w-[300px] shrink-0 print:w-auto print:max-w-none print:break-inside-avoid break-inside-avoid transition-all duration-500 ${isSel ? 'opacity-100 scale-100' : 'opacity-30 scale-95'}`}>
-                                                                    <Fretboard {...o} id={"fb-study-" + i} dropLabel={dropObj?dropObj.short:''} degreeLabel={studyChords[i] ? studyChords[i].label : ''} options={{labelMode, leftHanded: false, blindMode, showGhostNotes, showScales, showRootOverlay, tensionNotation, notationMode, onPlayNote: playSingleNote}} vlRank={studyPhaseIdx !== undefined ? 1 : o.vlRank} distance={o.dist} isSelected={isSel} onSelect={() => { if(!isPlaying){ setStudyProgressionStep(i); playVoicing(o.fingering); } }} onPlay={playVoicing} />
+                                                                    <Fretboard {...o} id={"fb-study-" + i} dropLabel={dropObj?dropObj.short:''} degreeLabel={studyChords[i] ? studyChords[i].label : ''} options={{labelMode, setLabelMode, leftHanded: false, blindMode, showGhostNotes, showScales, showRootOverlay, tensionNotation, notationMode, onPlayNote: playSingleNote}} vlRank={studyPhaseIdx !== undefined ? 1 : o.vlRank} distance={o.dist} isSelected={isSel} onSelect={() => { if(!isPlaying){ setStudyProgressionStep(i); playVoicing(o.fingering); } }} onPlay={playVoicing} />
                                                                 </div>
                                                             );
                                                         })}
@@ -1859,10 +1969,10 @@
                                             
                                             <div className="flex-1 flex flex-col items-center">
                                                 <h3 className="text-xl font-bold text-amber-500 mb-2">Edición Libre (Motor Enarmónico)</h3>
-                                                <p className="text-slate-400 text-xs mb-6 text-center">Toca el diapasón para colocar o quitar notas libremente. El Voice Leading y la identificación se calcularán automáticamente.</p>
-                                                <InteractiveFretboard selectedNotes={customNotes} onToggleNote={handleToggleCustomNote} leftHanded={leftHanded} notationMode={notationMode} />
+                                                <p className="text-slate-400 text-xs mb-6 text-center">Toca el diapasón para colocar o quitar notas libremente. Puedes usar las flechas del teclado para navegar y los números 1-4 para asignar dedos.</p>
+                                                <InteractiveFretboard selectedNotes={customNotes} onToggleNote={handleToggleCustomNote} onUpdateFinger={handleFingerChange} leftHanded={leftHanded} notationMode={notationMode} />
                                                 <p className="text-center text-[10px] mt-6 bg-slate-900 p-2.5 rounded-xl border border-slate-800 text-slate-400 w-full max-w-[280px]">
-                                                    <span className="text-amber-500 font-bold block mb-1 uppercase tracking-widest text-[9px]">Instrucciones:</span>
+                                                    <span className="text-amber-500 font-bold block mb-1 uppercase tracking-widest text-[9px]">Ratón (Clics):</span>
                                                     <span className="text-amber-400">1 Clic:</span> # Sostenido &nbsp;|&nbsp; 
                                                     <span className="text-amber-400">2 Clics:</span> b Bemol &nbsp;|&nbsp; 
                                                     <span className="text-rose-400">3 Clics:</span> Borrar
@@ -1895,19 +2005,23 @@
 
                                                 {customNotes.length > 0 && (
                                                     <div className="mb-4 bg-slate-900/50 p-3 rounded-xl border border-slate-800">
-                                                        <label className="text-[10px] uppercase font-bold text-amber-500 mb-2 block tracking-widest">2. Asigna Dedos (Opcional)</label>
-                                                        <div className="grid grid-cols-2 gap-2">
-                                                            {customNotes.map(n => {
+                                                        <label className="text-[10px] uppercase font-bold text-amber-500 mb-2 block tracking-widest flex items-center justify-between">
+                                                            <span>2. Asigna Dedos (Opcional)</span>
+                                                            <span className="text-slate-500 font-normal lowercase tracking-normal">6ta ➔ 1ra</span>
+                                                        </label>
+                                                        <div className="flex flex-row items-center justify-between gap-2 overflow-x-auto py-2">
+                                                            {[...customNotes].sort((a, b) => b.string - a.string).map(n => {
                                                                 const pref = n.explicitEnharmonic || 'sharps';
                                                                 const namesArray = notationMode === 'latin' ? (pref === 'flats' ? MIDI_TO_NOTE_FLAT : MIDI_TO_NOTE_SHARP).map(k => translateNote(k, 'latin')) : (pref === 'flats' ? MIDI_TO_NOTE_FLAT : MIDI_TO_NOTE_SHARP);
                                                                 const noteName = namesArray[n.note % 12];
                                                                 return (
-                                                                    <div key={`${n.string}-${n.fret}`} className="flex items-center justify-between bg-slate-800 p-2 rounded-lg border border-slate-700">
-                                                                        <span className="text-xs text-slate-300 font-bold">{noteName} (C.{6-n.string})</span>
+                                                                    <div key={`${n.string}-${n.fret}`} className="flex flex-col items-center justify-center bg-slate-800 p-2 rounded-lg border border-slate-700 min-w-[50px] flex-1">
+                                                                        <span className="text-[10px] text-slate-400 font-bold mb-1">C.{n.string + 1}</span>
+                                                                        <span className="text-sm text-slate-100 font-black mb-2">{noteName}</span>
                                                                         <select
                                                                             value={n.finger || ''}
                                                                             onChange={e => handleFingerChange(n.string, n.fret, e.target.value)}
-                                                                            className="bg-slate-900 border border-slate-600 text-amber-500 rounded p-1 text-xs outline-none font-bold"
+                                                                            className="bg-slate-900 border border-slate-600 text-amber-500 rounded p-1.5 text-xs outline-none font-bold text-center w-full"
                                                                         >
                                                                             <option value="">-</option>
                                                                             <option value="1">1</option>
@@ -1992,7 +2106,7 @@
                                                 {freeData.length > 0 ? freeData.map((o, i) => {
                                                     let dObj = freeDrops.find(x => x.id === freeDrop);
                                                     return <div key={i} className="w-full sm:w-[calc(50%-12px)] lg:w-[calc(25%-18px)] max-w-[280px] sm:max-w-[300px] print:w-auto print:max-w-none print:break-inside-avoid break-inside-avoid">
-                                                        <Fretboard {...o} id={"fb-dict-" + i} options={{labelMode, leftHanded: false, blindMode, showGhostNotes, showScales, showRootOverlay, tensionNotation, notationMode, onPlayNote: playSingleNote}} dropLabel={dObj?dObj.short:""} onPlay={playVoicing} hideInteractive={false}/>
+                                                        <Fretboard {...o} id={"fb-dict-" + i} options={{labelMode, setLabelMode, leftHanded: false, blindMode, showGhostNotes, showScales, showRootOverlay, tensionNotation, notationMode, onPlayNote: playSingleNote}} dropLabel={dObj?dObj.short:""} onPlay={playVoicing} hideInteractive={false}/>
                                                     </div>;
                                                 }) : <div className="text-slate-500 font-bold py-10 w-full text-center">No hay configuraciones posibles sin cuerdas al aire en este set. Intenta con otra estructura u otra cuerda de bajo.</div>}
                                             </div>
@@ -2041,7 +2155,7 @@
                                                             return (
                                                                 <div key={idx} className="w-full sm:w-[calc(50%-12px)] lg:w-[calc(25%-18px)] max-w-[280px] sm:max-w-[300px] cursor-pointer hover:scale-105 transition-transform group" onClick={() => handleSelectPendingOption(o)}>
                                                                     <div className="absolute -inset-1 bg-gradient-to-r from-amber-500 to-amber-300 rounded-3xl opacity-0 group-hover:opacity-30 blur transition-all z-0"></div>
-                                                                    <Fretboard {...o} id={"fb-pend-" + idx} dropLabel={dropObj?dropObj.short:''} options={{labelMode, leftHanded: false, blindMode: false, showGhostNotes: true, showScales: false, showRootOverlay: false, tensionNotation, notationMode, onPlayNote: playSingleNote}} hideInteractive={true} onPlay={playVoicing} vlRank={builderSeq.length===0 && editingIndex===null ? 0 : o.vlRank} distance={o.dist} onSelect={() => handleSelectPendingOption(o)} />
+                                                                    <Fretboard {...o} id={"fb-pend-" + idx} dropLabel={dropObj?dropObj.short:''} options={{labelMode, setLabelMode, leftHanded: false, blindMode: false, showGhostNotes: true, showScales: false, showRootOverlay: false, tensionNotation, notationMode, onPlayNote: playSingleNote}} hideInteractive={true} onPlay={playVoicing} vlRank={builderSeq.length===0 && editingIndex===null ? 0 : o.vlRank} distance={o.dist} onSelect={() => handleSelectPendingOption(o)} />
                                                                 </div>
                                                             )
                                                         })}
@@ -2093,7 +2207,7 @@
                                                             return (
                                                                 <div key={idx} id={"chord-step-" + idx} className={`w-full max-w-[280px] sm:max-w-[300px] shrink-0 print:w-auto print:max-w-none print:break-inside-avoid break-inside-avoid transition-all ${isEditingThis ? "ring-2 ring-amber-500 scale-105 rounded-2xl" : ""}`}>
                                                                     <div className={`text-center mb-2 font-black print:hidden hide-on-pdf ${isSel || isEditingThis ? 'text-amber-500' : 'text-slate-500'}`}>Acorde {idx + 1}</div>
-                                                                    <Fretboard {...data} id={"fb-build-" + idx} dropLabel={dropObj?dropObj.short:''} options={{labelMode, leftHanded: false, blindMode, showGhostNotes, showScales, showRootOverlay, tensionNotation, notationMode, isBuilder: true, onEdit: () => { handleEditChord(idx); setPendingOptions([]); }, onDelete: () => handleDeleteBuilderChord(idx), onPlayNote: playSingleNote}} vlRank={idx===0?0:data.vlRank} distance={data.dist} isSelected={isSel || isEditingThis} onPlay={playVoicing} hideInteractive={false} />
+                                                                    <Fretboard {...data} id={"fb-build-" + idx} dropLabel={dropObj?dropObj.short:''} options={{labelMode, setLabelMode, leftHanded: false, blindMode, showGhostNotes, showScales, showRootOverlay, tensionNotation, notationMode, isBuilder: true, onEdit: () => { handleEditChord(idx); setPendingOptions([]); }, onDelete: () => handleDeleteBuilderChord(idx), onPlayNote: playSingleNote}} vlRank={idx===0?0:data.vlRank} distance={data.dist} isSelected={isSel || isEditingThis} onPlay={playVoicing} hideInteractive={false} />
                                                                 </div>
                                                             );
                                                         })}
@@ -2118,7 +2232,7 @@
                                         </div>
                                         <p className="text-slate-400 text-xs mb-8">Haz clic en el diapasón para ubicar las notas. El motor buscará coincidencias exactas y poliacordes en la base de datos de jazz (soporta acordes Rootless y sin 5ta).</p>
                                         <div className="overflow-visible py-4 flex justify-center">
-                                            <InteractiveFretboard selectedNotes={reverseNotes} onToggleNote={toggleReverseNote} leftHanded={leftHanded} notationMode={notationMode} />
+                                            <InteractiveFretboard selectedNotes={reverseNotes} onToggleNote={toggleReverseNote} onUpdateFinger={() => {}} leftHanded={leftHanded} notationMode={notationMode} />
                                         </div>
                                     </div>
                                     
@@ -2229,4 +2343,4 @@
         root.render(<App />);
     </script>
 </body>
-    </html>
+</html>
