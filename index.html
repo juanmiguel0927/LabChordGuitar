@@ -660,7 +660,20 @@
                 { id: 'madd9_no5', name: 'm(add9)', intervals: [0,2,3], score: 9 }, { id: '6/9#11_no5', name: '6/9(#11)', intervals: [0,2,4,6,9], score: 15 },
                 { id: 'm6/9_no5', name: 'm6/9', intervals: [0,2,3,9], score: 13 }, { id: 'm6/9#11_no5', name: 'm6/9(#11)', intervals: [0,2,3,6,9], score: 15 },
                 { id: '7sus2', name: '7sus2', intervals: [0,2,7,10], score: 12 }, { id: '9sus4(no5)', name: '9sus4', intervals: [0,2,5,10], score: 13 },
-                { id: '13sus4(no5)', name: '13sus4', intervals: [0,2,5,9,10], score: 14 }, { id: '6/9sus4', name: '6/9sus4', intervals: [0,2,5,7,9], score: 12 }
+                { id: '13sus4(no5)', name: '13sus4', intervals: [0,2,5,9,10], score: 14 }, { id: '6/9sus4', name: '6/9sus4', intervals: [0,2,5,7,9], score: 12 },
+                
+                // Nuevas variantes comunes en guitarra (omitiendo 5ta y/o 11na por comodidad o sonoridad)
+                { id: '13_standard', name: '13', intervals: [0,2,4,9,10], score: 16 },
+                { id: 'Maj13_standard', name: 'Maj13', intervals: [0,2,4,9,11], score: 16 },
+                { id: 'm13_standard', name: 'm13', intervals: [0,2,3,9,10], score: 16 },
+                { id: '11_no5', name: '11', intervals: [0,2,4,5,10], score: 14 },
+                { id: 'm11_no5', name: 'm11', intervals: [0,2,3,5,10], score: 14 },
+                { id: 'Maj11_no5', name: 'Maj11', intervals: [0,2,4,5,11], score: 14 },
+                { id: '7b13', name: '7(b13)', intervals: [0,4,8,10], score: 14 },
+                { id: '7b9b13', name: '7(b9,b13)', intervals: [0,1,4,8,10], score: 15 },
+                { id: '7#9b13', name: '7(#9,b13)', intervals: [0,3,4,8,10], score: 15 },
+                { id: '7#11_no5', name: '7(#11)', intervals: [0,4,6,10], score: 13 },
+                { id: 'Maj7#11_no5', name: 'Maj7(#11)', intervals: [0,4,6,11], score: 13 }
             ];
 
             const getNoteName = (pc, isRoot) => {
