@@ -126,8 +126,7 @@
                 Image: <g><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></g>,
                 Download: <g><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></g>,
                 Share2: <g><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></g>,
-                UploadCloud: <g><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/><polyline points="16 16 12 12 8 16"/></g>,
-                Settings: <g><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"></path><circle cx="12" cy="12" r="3"></circle></g>
+                UploadCloud: <g><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/><polyline points="16 16 12 12 8 16"/></g>
             };
             return (
                 <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
@@ -461,7 +460,6 @@
             if (!fingering || fingering.length === 0) return fingering;
             let result = fingering.map(f => Object.assign({}, f));
             
-            // Ordenamos por traste (ascendente) y luego por cuerda (descendente, de grave a aguda)
             let sorted = [...result].sort((a, b) => {
                 if (a.fret !== b.fret) return a.fret - b.fret;
                 return b.string - a.string;
@@ -471,20 +469,17 @@
             const minFret = sorted[0].fret;
             const minFretNotes = sorted.filter(n => n.fret === minFret);
 
-            // Detectar posible cejilla o asignar dedo 1 a la(s) nota(s) más grave(s)
             if (minFretNotes.length > 1) {
                 minFretNotes.forEach(n => { n.finger = '1'; });
-                availableFingers.shift(); // Consumimos el dedo 1
+                availableFingers.shift(); 
                 sorted = sorted.filter(n => n.fret !== minFret);
             }
 
-            // Asignamos los dedos restantes secuencialmente a las notas que quedan
             sorted.forEach(n => {
                 if (availableFingers.length > 0) n.finger = availableFingers.shift();
-                else n.finger = '4'; // Si faltan dedos, reutilizamos el meñique
+                else n.finger = '4'; 
             });
 
-            // Mapear de vuelta al orden original
             return result.map(orig => {
                 const calculated = sorted.find(s => s.string === orig.string && s.fret === orig.fret) || minFretNotes.find(s => s.string === orig.string && s.fret === orig.fret);
                 return Object.assign({}, orig, { finger: calculated ? calculated.finger : orig.finger });
@@ -532,7 +527,6 @@
                 let minB = sB.length > 0 ? Math.min.apply(null, sB) : 0;
                 return minA - minB; 
             });
-            // Aplicamos heurística automática antes de devolver
             return calculateFingering(validFingerings[0]);
         };
 
@@ -767,21 +761,14 @@
         };
 
         const getIntervalName = function(notes) {
-            if (!notes || notes.length !== 2) return '';
-            const diff = Math.abs(notes[0].note - notes[1].note);
-            const names = {
-                0: 'Unísono', 1: '2da Menor', 2: '2da Mayor', 3: '3ra Menor',
-                4: '3ra Mayor', 5: '4ta Justa', 6: 'Tritono', 7: '5ta Justa',
-                8: '6ta Menor', 9: '6ta Mayor', 10: '7ma Menor', 11: '7ma Mayor',
-                12: 'Octava', 13: '9na Menor', 14: '9na Mayor', 15: '10ma Menor',
-                16: '10ma Mayor', 17: '11na Justa', 18: '11na Aum.',
-                19: '12va Justa', 20: '13ra Menor', 21: '13ra Mayor'
+            const sorted = [...notes].sort((a,b) => a.note - b.note);
+            const diff = sorted[1].note - sorted[0].note;
+            const intervals = {
+                0: 'Unísono', 1: '2da menor (b2)', 2: '2da Mayor (2)', 3: '3ra menor (b3)', 4: '3ra Mayor (3)', 5: '4ta Justa (4)', 6: 'Tritono (b5/#4)', 7: '5ta Justa (5)',
+                8: '6ta menor (b6)', 9: '6ta Mayor (6)', 10: '7ma menor (b7)', 11: '7ma Mayor (Maj7)', 12: 'Octava Perfecta (8va)', 13: '9na menor (b9)', 14: '9na Mayor (9)', 15: '9na Aumentada (#9)',
+                16: '10ma Mayor', 17: '11na Justa (11)', 18: '11na Aumentada (#11)', 19: '5ta Justa (8va arriba)', 20: '13ra menor (b13)', 21: '13ra Mayor (13)', 22: '7ma menor (8va arriba)', 23: '7ma Mayor (8va arriba)', 24: 'Doble Octava'
             };
-            if (names[diff]) return names[diff];
-            const mod = diff % 12;
-            const octaves = Math.floor(diff / 12);
-            const baseNames = ['Unísono', '2da Menor', '2da Mayor', '3ra Menor', '3ra Mayor', '4ta Justa', 'Tritono', '5ta Justa', '6ta Menor', '6ta Mayor', '7ma Menor', '7ma Mayor'];
-            return `${baseNames[mod]} (+${octaves} 8va)`;
+            return intervals[diff] || `Distancia de ${diff} semitonos`;
         };
         
         const getQualsForTrack = function(t) { return t === 'triads' ? TRIAD_QUALITIES : t === 'shells' ? SHELL_QUALITIES : t === 'tensions' ? TENSION_QUALITIES : QUAD_QUALITIES; };
@@ -822,13 +809,13 @@
                 markers.forEach(fret => {
                     if (fret >= startFret && fret <= startFret + numFrets - 1) {
                         const topPos = ((fret - startFret + 0.5) / numFrets) * 100;
-                        elements.push(<div key={'dot'+fret} className="absolute w-3 h-3 bg-white/10 rounded-full left-1/2 -translate-x-1/2 print:bg-black/20" style={{ top: topPos + '%', transform: 'translate(-50%, -50%)' }} />);
+                        elements.push(<div key={'dot'+fret} className="absolute w-3 h-3 bg-slate-400/20 rounded-full left-1/2 -translate-x-1/2 print:bg-slate-300" style={{ top: topPos + '%', transform: 'translate(-50%, -50%)' }} />);
                     }
                 });
                 if (12 >= startFret && 12 <= startFret + numFrets - 1) {
                     const topPos = ((12 - startFret + 0.5) / numFrets) * 100;
-                    elements.push(<div key="dot12a" className="absolute w-2.5 h-2.5 bg-white/10 rounded-full left-1/3 -translate-x-1/2 print:bg-black/20" style={{ top: topPos + '%', transform: 'translate(-50%, -50%)' }} />);
-                    elements.push(<div key="dot12b" className="absolute w-2.5 h-2.5 bg-white/10 rounded-full left-2/3 -translate-x-1/2 print:bg-black/20" style={{ top: topPos + '%', transform: 'translate(-50%, -50%)' }} />);
+                    elements.push(<div key="dot12a" className="absolute w-2.5 h-2.5 bg-slate-400/20 rounded-full left-1/3 -translate-x-1/2 print:bg-slate-300" style={{ top: topPos + '%', transform: 'translate(-50%, -50%)' }} />);
+                    elements.push(<div key="dot12b" className="absolute w-2.5 h-2.5 bg-slate-400/20 rounded-full left-2/3 -translate-x-1/2 print:bg-slate-300" style={{ top: topPos + '%', transform: 'translate(-50%, -50%)' }} />);
                 }
                 return elements;
             };
@@ -836,16 +823,16 @@
             const handleNodeClick = function(e, noteData) {
                 e.stopPropagation();
                 if (options.onPlayNote) options.onPlayNote(noteData);
-                if (localLabelMode === 'fingers' || options.labelMode === 'fingers') {
-                    if (localLabelMode !== 'fingers') setLocalLabelMode('fingers');
-                    setLocalFingers(prev => {
-                        const key = `${noteData.string}-${noteData.fret}`;
-                        const current = prev[key] !== undefined ? prev[key] : (noteData.finger || null);
-                        const seq = [null, '1', '2', '3', '4', 'T'];
-                        const nextIdx = (seq.indexOf(current) + 1) % seq.length;
-                        return { ...prev, [key]: seq[nextIdx] };
-                    });
-                }
+                
+                setLocalFingers(prev => {
+                    const key = `${noteData.string}-${noteData.fret}`;
+                    const current = prev[key] !== undefined ? prev[key] : (noteData.finger || null);
+                    const seq = [null, '1', '2', '3', '4', 'T'];
+                    const nextIdx = (seq.indexOf(current) + 1) % seq.length;
+                    return { ...prev, [key]: seq[nextIdx] };
+                });
+
+                if (localLabelMode !== 'fingers') setLocalLabelMode('fingers');
             };
 
             const cycleLocalLabelMode = function(e) {
@@ -882,6 +869,8 @@
                 });
             };
 
+            const modeText = localLabelMode === 'intervals' ? 'Grados' : localLabelMode === 'notes' ? 'Notas' : 'Dedos';
+
             return (
                 <div onClick={!isLocked ? onSelect : undefined} id={props.id} className={"bg-slate-900 p-4 sm:p-5 rounded-2xl border transition-all duration-300 min-w-[240px] w-full max-w-[280px] sm:max-w-[300px] shrink-0 shadow-lg relative flex flex-col print:border-none print:shadow-none print:bg-transparent print:p-0 " + (!hideInteractive && !isLocked && onSelect ? 'cursor-pointer hover:border-amber-500/50 hover:shadow-amber-500/10 group ' : '') + (isSelected ? 'border-amber-500 ring-2 ring-amber-500/30 bg-slate-800 transform scale-[1.02] ' : 'border-slate-800 ') + (isLocked ? 'opacity-40 grayscale pointer-events-none ' : '')}>
                     {vlRank > 0 && !isSelected && !options.hideRank && (
@@ -896,7 +885,7 @@
                             <button onClick={downloadSingle} className="text-slate-500 hover:text-emerald-400 p-1.5 bg-slate-800/80 rounded border border-slate-700 transition-colors" title="Descargar JPEG">
                                 <Icon name="Download" size={12}/>
                             </button>
-                            <button onClick={cycleLocalLabelMode} className="text-slate-500 hover:text-amber-500 p-1.5 bg-slate-800/80 rounded border border-slate-700 transition-colors flex items-center justify-center font-black text-[9px]" title="Cambiar Grados/Notas/Dedos individualmente">
+                            <button onClick={cycleLocalLabelMode} className="text-slate-500 hover:text-amber-500 p-1.5 bg-slate-800/80 rounded border border-slate-700 transition-colors flex items-center justify-center font-black text-[9px] w-7" title="Cambiar Grados/Notas/Dedos individualmente">
                                 {localLabelMode === 'intervals' ? 'G' : localLabelMode === 'notes' ? 'N' : 'D'}
                             </button>
                         </div>
@@ -921,7 +910,11 @@
                                 <ChordNameDisplay name={formattedChordName} />
                             </h3>
                             <span className="text-amber-500 text-xs font-black tracking-widest mt-2">{name}</span>
-                            <span className="text-slate-500 text-[10px] mt-0.5">{dropLabel}</span>
+                            <span className="text-slate-500 text-[9px] mt-0.5 uppercase flex gap-1 font-bold">
+                                <span>{dropLabel}</span>
+                                {dropLabel && <span className="opacity-50">|</span>}
+                                <span className="text-sky-400">{modeText}</span>
+                            </span>
                         </div>
                         {!hideInteractive && !isLocked && (
                             <button onClick={e => { e.stopPropagation(); onPlay(fingering); }} className={"bg-slate-800 hover:bg-amber-500 hover:text-slate-900 rounded-full transition-all text-slate-300 shadow-md shrink-0 ml-1 print:hidden group-hover:bg-slate-700 z-20 relative hide-on-pdf " + (options.isBuilder ? 'p-2' : 'p-2.5 ml-2')}>
@@ -934,8 +927,8 @@
                         <div className={"relative flex justify-between w-full max-w-[140px] border border-slate-600 bg-slate-800 shadow-inner rounded-sm print:bg-transparent print:border-slate-400 print:shadow-none transition-all duration-500 " + (isBlind ? "filter blur-md grayscale" : "")} style={{ height: (160 * (numFrets / 5)) + 'px', minHeight: (160 * (numFrets / 5)) + 'px' }}>
                             {renderMarkers()}
                             
-                            <div className="absolute -left-16 text-amber-500 font-black text-sm bg-slate-900 border border-slate-700 rounded print:text-amber-500 print:bg-slate-800 print:border-slate-500 z-10 text-center shadow-md flex items-center justify-center" style={{ top: (0.5 / numFrets * 100) + '%', transform: 'translateY(-50%)', width: '42px', height: '24px' }}>
-                                <span style={{ marginTop: '-5px' }}>{startFret}fr</span>
+                            <div className="absolute -left-16 text-amber-500 font-black text-[13px] bg-slate-900 border border-slate-700 rounded print:text-amber-500 print:bg-slate-800 print:border-slate-500 z-10 shadow-md" style={{ top: (0.5 / numFrets * 100) + '%', transform: 'translateY(-50%)', width: '42px', height: '26px' }}>
+                                <span style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', marginTop: '-3px' }}>{startFret}fr</span>
                             </div>
                             
                             {stringsArray.map(sIdx => <div key={sIdx} className="w-[1.5px] bg-slate-400 opacity-60 h-full relative print:bg-slate-400 z-0" />)}
@@ -956,8 +949,8 @@
                                             const displayLabelScale = localLabelMode === 'intervals' ? displayDegree : noteNames[noteMidi % 12];
                                             let bgClass = scaleNote.t ? 'bg-fuchsia-600 border border-fuchsia-400 shadow-[0_0_8px_rgba(217,70,239,0.6)]' : 'bg-indigo-600 border border-indigo-400 shadow-[0_0_8px_rgba(99,102,241,0.6)]';
                                             return (
-                                                <div key={`sc-${actualFret}-${sNum}`} className={`absolute w-6 h-6 -ml-3 -mt-3 rounded-full text-white print:hidden z-10 pointer-events-none text-center font-black text-[10px] ${bgClass}`} style={{ left: (stringsArray.indexOf(sNum) / 5 * 100) + '%', top: ((actualFret - startFret + 0.5) / numFrets * 100) + '%', lineHeight: '24px' }}>
-                                                    <span style={{ marginTop: '-5px', display: 'inline-block' }}>{displayLabelScale}</span>
+                                                <div key={`sc-${actualFret}-${sNum}`} className={`absolute w-[22px] h-[22px] -ml-[11px] -mt-[11px] rounded-full text-white print:hidden z-10 pointer-events-none ${bgClass}`} style={{ left: (stringsArray.indexOf(sNum) / 5 * 100) + '%', top: ((actualFret - startFret + 0.5) / numFrets * 100) + '%' }}>
+                                                    <span className="font-black text-[9px]" style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', marginTop: '-3px' }}>{displayLabelScale}</span>
                                                 </div>
                                             );
                                         }
@@ -974,8 +967,8 @@
                                         const isFingered = fingering.some(f => f.string === sNum && f.fret === actualFret);
                                         if (!isFingered) {
                                             return (
-                                                <div key={`rt-${actualFret}-${sNum}`} className="absolute w-[18px] h-[18px] -ml-[9px] -mt-[9px] rounded-sm border border-rose-500/60 bg-rose-500/10 print:hidden z-0 pointer-events-none text-rose-400 flex items-center justify-center" style={{ left: (stringsArray.indexOf(sNum) / 5 * 100) + '%', top: ((actualFret - startFret + 0.5) / numFrets * 100) + '%' }}>
-                                                    <span className="font-black text-[9px]" style={{ marginTop: '-3px' }}>R</span>
+                                                <div key={`rt-${actualFret}-${sNum}`} className="absolute w-[18px] h-[18px] -ml-[9px] -mt-[9px] rounded-sm border border-rose-500/60 bg-rose-500/10 print:hidden z-0 pointer-events-none text-rose-400" style={{ left: (stringsArray.indexOf(sNum) / 5 * 100) + '%', top: ((actualFret - startFret + 0.5) / numFrets * 100) + '%' }}>
+                                                    <span className="font-black text-[9px]" style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', marginTop: '-3px' }}>R</span>
                                                 </div>
                                             );
                                         }
@@ -1008,11 +1001,11 @@
                                     );
                                 }
 
-                                let colorClass = isRoot ? 'bg-amber-500 text-slate-950 border-amber-400 print:bg-amber-500 print:text-white print:border-amber-400' : isTension ? 'bg-slate-900 text-fuchsia-400 border-fuchsia-500 print:bg-white print:text-fuchsia-600 print:border-fuchsia-500' : 'bg-slate-900 text-slate-100 border-slate-600 print:bg-white print:text-slate-700 print:border-slate-400';
+                                let colorClass = isRoot ? 'bg-amber-500 text-slate-950 border-amber-400 print:bg-amber-500 print:text-black print:border-amber-400' : isTension ? 'bg-slate-900 text-fuchsia-400 border-fuchsia-500 print:bg-white print:text-fuchsia-600 print:border-slate-300' : 'bg-slate-900 text-slate-100 border-slate-600 print:bg-white print:text-slate-800 print:border-slate-300';
                                 
                                 return (
-                                    <div key={i} onClick={e => handleNodeClick(e, noteData)} className={`absolute w-8 h-8 -ml-4 -mt-4 rounded-full z-20 border-[1.5px] shadow-lg cursor-pointer hover:scale-[1.25] transition-transform text-center font-black text-xs ${colorClass}`} style={{ left: (stringsArray.indexOf(noteData.string) / 5 * 100) + '%', top: ((noteData.fret - startFret + 0.5) / numFrets * 100) + '%', lineHeight: '30px' }}>
-                                        <span style={{ marginTop: '-5px', display: 'inline-block' }}>{displayLabel}</span>
+                                    <div key={i} onClick={e => handleNodeClick(e, noteData)} className={`absolute w-[28px] h-[28px] -ml-[14px] -mt-[14px] rounded-full z-20 border-[1.5px] shadow-lg cursor-pointer hover:scale-[1.25] transition-transform ${colorClass}`} style={{ left: (stringsArray.indexOf(noteData.string) / 5 * 100) + '%', top: ((noteData.fret - startFret + 0.5) / numFrets * 100) + '%' }}>
+                                        <span className="font-black text-[11px]" style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', marginTop: '-3px' }}>{displayLabel}</span>
                                     </div>
                                 );
                             })}
@@ -1116,8 +1109,8 @@
                         return (
                             <div key={`grid-${fret}-${sNum}`} onClick={() => handleNoteClick(sNum, fret, noteMidi, isSelectedNote)} className={`absolute w-8 h-8 -ml-4 -mt-4 cursor-pointer flex items-center justify-center z-20 rounded-full hover:bg-white/10 transition-colors ${isFocused ? 'ring-2 ring-white bg-white/10' : ''}`} style={{ left: `${(stringsArray.indexOf(sNum) / 5) * 100}%`, top: `${topPos}%` }}>
                                 {isSelectedNote && (
-                                    <div className="w-7 h-7 rounded-full bg-amber-500 text-slate-950 border border-amber-300 shadow-[0_0_10px_rgba(245,158,11,0.8)] text-center font-black text-[9px]" style={{ lineHeight: '26px' }}>
-                                        <span style={{ marginTop: '-5px', display: 'inline-block' }}>{isSelectedNote.finger || noteName}</span>
+                                    <div className="w-[26px] h-[26px] rounded-full bg-amber-500 text-slate-950 border border-amber-300 shadow-[0_0_10px_rgba(245,158,11,0.8)] relative">
+                                        <span className="font-black text-[9px]" style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', marginTop: '-1px' }}>{isSelectedNote.finger || noteName}</span>
                                     </div>
                                 )}
                             </div>
@@ -1645,7 +1638,7 @@
                 const nameToUse = customName.trim() || (selectedMatch ? selectedMatch.name : 'Personalizado');
                 const newChord = {
                     isCustom: true, name: intervalName, formattedChordName: nameToUse,
-                    fingering: customNotes.map(n => ({ string: n.string, fret: n.fret, note: n.note, explicitEnharmonic: n.explicitEnharmonic, finger: n.finger || null })),
+                    fingering: calculateFingering(customNotes.map(n => ({ string: n.string, fret: n.fret, note: n.note, explicitEnharmonic: n.explicitEnharmonic, finger: n.finger || null }))),
                     prevFingering: null, dist: 0, vlRank: 0, track: 'custom', rootMidi: finalRootMidi, quality: finalQuality
                 };
                 
